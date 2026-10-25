@@ -213,7 +213,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .thumb i{width:12px;height:12px;border-radius:50%;display:block}
 .item-t{min-width:0}
 .item-t b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.item-t span{font-size:12px;color:var(--muted)}
+.item-t span{display:block;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item-m{text-align:right;font:400 11px/1.4 var(--f-data);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .tag{display:inline-block;font:600 9px/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);border-radius:3px;padding:2px 4px;margin-left:6px;vertical-align:2px;color:var(--muted)}
 .empty{border:1px dashed var(--line);border-radius:8px;padding:20px;text-align:center;color:var(--muted)}
@@ -514,7 +514,9 @@ form{display:grid;gap:14px}
           </div>
         </div>
         <div class="field">
-          <span class="lbl">Where it was found</span>
+          <label for="fPlace">Where it was found</label>
+          <input id="fPlace" list="placeList" placeholder="Place name, e.g. Old Mill Park" autocomplete="off">
+          <datalist id="placeList"></datalist>
           <div class="two">
             <input id="fLat" inputmode="decimal" placeholder="Latitude 37.9060" aria-label="Latitude">
             <input id="fLon" inputmode="decimal" placeholder="Longitude −122.5449" aria-label="Longitude">
@@ -867,12 +869,13 @@ function render(){
   $("people").innerHTML = names.length ? `<span class="plabel">Found by</span>` + [["","Everyone",finds.length], ...names.map(n=>[n,n,people[n]])]
     .map(([k,label,c])=>`<button class="chip pchip" type="button" data-person="${esc(k)}" aria-pressed="${personFilter===k}">${esc(label)} <em>${c}</em></button>`).join("") : "";
   $("finderList").innerHTML=names.map(n=>`<option value="${esc(n)}">`).join("");
+  $("placeList").innerHTML=[...new Set(finds.map(f=>String(f.place||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b)).map(p=>`<option value="${esc(p)}">`).join("");
   // list
   const vis=sorted(visibleFinds());
   $("list").innerHTML=vis.map(f=>{
     const e=elevFt(f.lat,f.lon);
     return `<li class="item${f.id===selected?" sel":""}" data-id="${esc(f.id)}" tabindex="0">${thumbHTML(f)}
-      <div class="item-t"><b>${esc(f.name||"Untitled find")}${f.example?'<span class="tag">Example</span>':""}</b><span>${esc(catLabel(f.category))}${f.age?" · "+esc(f.age):""}${finderOf(f)?" · "+esc(finderOf(f)):""}</span></div>
+      <div class="item-t"><b>${esc(f.name||"Untitled find")}${f.example?'<span class="tag">Example</span>':""}</b><span>${[catLabel(f.category), f.age, String(f.place||"").trim(), finderOf(f)].filter(Boolean).map(esc).join(" · ")}</span></div>
       <div class="item-m">${f.foundOn?esc(f.foundOn):"—"}<br>${e==null?"outside circle":fmtNum(e)+" ft"}</div></li>`;}).join("");
   if(!finds.length && db) $("list").innerHTML=`<li class="empty"><b>No finds logged yet</b>Tap “Log a find”, add a photo, and pick the spot on the map.</li>`;
   buildMarkers(); renderTimeline(); renderDetail();
@@ -922,11 +925,12 @@ function renderDetail(){
       <div><span class="chip" style="cursor:default"><i style="background:${catColor(f.category)}"></i>${esc(catLabel(f.category))}</span>${f.example?'<span class="tag">Example</span>':""}</div>
       <h2>${esc(f.name||"Untitled find")}</h2>
       <dl class="kv">
-        <dt>Est. age</dt><dd>${esc(f.age||"—")}</dd>
-        <dt>Found</dt><dd>${fmtDate(f.foundOn)}</dd>
+        ${f.age?`<dt>Est. age</dt><dd>${esc(f.age)}</dd>`:""}
+        ${f.foundOn?`<dt>Found</dt><dd>${fmtDate(f.foundOn)}</dd>`:""}
         ${finderOf(f)?`<dt>Found by</dt><dd>${esc(finderOf(f))}</dd>`:""}
-        <dt>Location</dt><dd class="mono">${hasLoc?`${(+f.lat).toFixed(5)}, ${(+f.lon).toFixed(5)}`:"—"}</dd>
-        <dt>Elevation</dt><dd class="mono">${e==null?(hasLoc?"Outside the 3-mile circle":"—"):fmtNum(e)+" ft"}</dd>
+        ${String(f.place||"").trim()?`<dt>Place</dt><dd>${esc(f.place.trim())}</dd>`:""}
+        ${hasLoc?`<dt>Location</dt><dd class="mono">${(+f.lat).toFixed(5)}, ${(+f.lon).toFixed(5)}</dd>
+        <dt>Elevation</dt><dd class="mono">${e==null?"Outside the 3-mile circle":fmtNum(e)+" ft"}</dd>`:""}
         ${f.notes?`<dt>Notes</dt><dd style="white-space:pre-wrap">${esc(f.notes)}</dd>`:""}
         ${safeLink(f.link)?`<dt>Reference</dt><dd><a href="${esc(f.link)}" target="_blank" rel="noopener">${esc(linkLabel(f.link))} ↗</a></dd>`:""}
       </dl>
@@ -971,7 +975,7 @@ function openForm(f=null){
   $("fLat").value=f?.lat??""; $("fLon").value=f?.lon??""; $("fNotes").value=f?.notes||"";
   $("fPhoto").value=""; $("formErr").hidden=true; $("photoHint").textContent=""; $("photoHint").className="hint";
   renderPhotoGrid();
-  $("fFinder").value = f ? finderOf(f) : lastFinder(); $("fLink").value = f?.link || "";
+  $("fFinder").value = f ? finderOf(f) : lastFinder(); $("fLink").value = f?.link || ""; $("fPlace").value = f?.place || "";
   $("photoHint").textContent = assets ? "" : "Photos can’t be saved until the database is set up.";
   $("fPhoto").disabled=!assets;
   updateLocHint();
@@ -1066,7 +1070,7 @@ $("form").onsubmit=async e=>{
   try{
     const prev=editing?finds.find(f=>f.id===editing):null;
     const data={ name, category:catLabel(cat||"Other"), age:$("fAge").value.trim(), foundOn:$("fDate").value||"",
-      lat, lon, notes:$("fNotes").value.trim(), finder, link, updatedAt:new Date().toISOString(), example:false, createdBy:prev?.createdBy||uid() };
+      lat, lon, place:$("fPlace").value.trim(), notes:$("fNotes").value.trim(), finder, link, updatedAt:new Date().toISOString(), example:false, createdBy:prev?.createdBy||uid() };
     const photos=[], fresh=photoItems.filter(it=>it.kind==="new").length; let n=0;
     for(const it of photoItems){
       if(it.kind==="saved"){ photos.push(it.p); continue; }
