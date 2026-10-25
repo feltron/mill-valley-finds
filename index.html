@@ -204,6 +204,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 .chip i{width:9px;height:9px;border-radius:50%;display:inline-block;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
 .chip em{font-style:normal;color:var(--muted);font-family:var(--f-data);font-size:11px}
 .listbar{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.listbar{flex-wrap:wrap;row-gap:8px}
+.lfilters{display:flex;gap:12px;flex:1 1 100%;min-width:0}
+.lfilters label{display:flex;align-items:center;gap:6px;flex:1 1 0;min-width:0}
+.lfilters label[hidden]{display:none}
+.lfilters select{flex:1;min-width:0}
 .listbar select{background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px}
 .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border-top:1px solid var(--line)}
 .item{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:4px}
@@ -450,10 +455,13 @@ form{display:grid;gap:14px}
         <div class="stat"><b id="sHigh">—</b><span>Highest ft</span></div>
       </div>
       <div class="chips" id="chips"></div>
-      <div class="chips people" id="people"></div>
       <div class="listbar">
         <h3 class="section-h">Finds</h3>
-        <label class="row note">Sort
+        <div class="lfilters">
+        <label class="note" id="peopleWrap" hidden>Found by
+          <select id="people"></select>
+        </label>
+        <label class="note">Sort
           <select id="sort">
             <option value="found">Date found</option>
             <option value="age">Oldest first</option>
@@ -461,6 +469,7 @@ form{display:grid;gap:14px}
             <option value="elev">Elevation</option>
           </select>
         </label>
+        </div>
       </div>
       <ul class="list" id="list"></ul>
       <form class="unlock" id="unlockForm" hidden>
@@ -866,8 +875,9 @@ function render(){
   const people={}; finds.forEach(f=>{ const p=finderOf(f); if(p) people[p]=(people[p]||0)+1; });
   const names=Object.keys(people).sort((a,b)=>a.localeCompare(b));
   if(personFilter && !people[personFilter]) personFilter="";
-  $("people").innerHTML = names.length ? `<span class="plabel">Found by</span>` + [["","Everyone",finds.length], ...names.map(n=>[n,n,people[n]])]
-    .map(([k,label,c])=>`<button class="chip pchip" type="button" data-person="${esc(k)}" aria-pressed="${personFilter===k}">${esc(label)} <em>${c}</em></button>`).join("") : "";
+  $("peopleWrap").hidden = !names.length;
+  $("people").innerHTML = [["","Everyone",finds.length], ...names.map(n=>[n,n,people[n]])]
+    .map(([k,label,c])=>`<option value="${esc(k)}"${personFilter===k?" selected":""}>${esc(label)} (${c})</option>`).join("");
   $("finderList").innerHTML=names.map(n=>`<option value="${esc(n)}">`).join("");
   $("placeList").innerHTML=[...new Set(finds.map(f=>String(f.place||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b)).map(p=>`<option value="${esc(p)}">`).join("");
   // list
@@ -881,7 +891,7 @@ function render(){
   buildMarkers(); renderTimeline(); renderDetail();
 }
 $("chips").onclick=e=>{ const b=e.target.closest(".chip"); if(!b) return; const k=b.dataset.cat; hidden.has(k)?hidden.delete(k):hidden.add(k); render(); };
-$("people").onclick=e=>{ const b=e.target.closest(".pchip"); if(!b) return; personFilter=b.dataset.person; render(); };
+$("people").onchange=e=>{ personFilter=e.target.value; render(); };
 $("sort").onchange=render;
 $("list").onclick=e=>{ const li=e.target.closest(".item"); if(li) select(li.dataset.id); };
 $("list").onkeydown=e=>{ if(e.key==="Enter"){ const li=e.target.closest(".item"); if(li) select(li.dataset.id);} };
