@@ -1014,18 +1014,11 @@ const CORNER_NAMES = ["top-left","top-right","bottom-right","bottom-left"];
 /* layer stack: every layer has its own switch and opacity; they blend over a plain clay surface */
 const texCache = new Map();
 const MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
-const LAYER_DEFAULTS = {elev:{on:true,op:1}, satellite:{on:true,op:1}, relief:{on:false,op:0.85}, contours:{on:true,op:0.6}, streets:{on:true,op:1}};
+const LAYER_DEFAULTS = {elev:{on:false,op:1}, satellite:{on:false,op:1}, relief:{on:true,op:0.6}, contours:{on:false,op:0.6}, streets:{on:true,op:0.3}};
 let layerState = null;
-try{ layerState = JSON.parse(localStorage.getItem("mvf-layers")||"null"); }catch(e){}
-if(!layerState){ // carry over the earlier single-layer choice
-  layerState = {};
-  try{
-    const old=localStorage.getItem("mvf-layer"), ob=JSON.parse(localStorage.getItem("mvf-blend")||"{}")||{};
-    if(old==="contours") layerState.satellite={on:false};
-    else if(old) layerState[old]={on:true, ...(ob[old]!=null?{op:ob[old]}:{})};
-  }catch(e){}
-}
-function saveLocal(){ try{ localStorage.setItem("mvf-layers", JSON.stringify(layerState)); }catch(e){} }
+try{ layerState = JSON.parse(localStorage.getItem("mvf-layers-v2")||"null"); }catch(e){} // v2: everyone starts from the current defaults
+if(!layerState) layerState = {};
+function saveLocal(){ try{ localStorage.setItem("mvf-layers-v2", JSON.stringify(layerState)); }catch(e){} }
 function stateOf(id, kind){
   const d = LAYER_DEFAULTS[id] || (kind==="historical" ? {on:false,op:0.9} : {on:false,op:1}), s = layerState[id] || {};
   return {on: s.on ?? d.on, op: s.op ?? d.op};
