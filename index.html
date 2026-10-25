@@ -13,7 +13,7 @@
 :root{
   --bg:#E9ECE6; --surface:#F7F8F4; --raised:#FFFFFF; --ink:#1A2320; --muted:#5D6A63; --line:#CBD2CA;
   --accent:#A8682A; --accent-ink:#FFFFFF; --danger:#B23A2E;
-  --clay:#D3C8BA; --t-line:#1E2A21; --r-major:#F4B23E; --r-road:#FFFFFF; --r-service:#ECE6DA; --r-trail:#C4562C; --r-oldrail:#9B3FB5; --r-rail:#3A3A3A; --sl-ink:#1B231E; --sl-halo:#FFFFFF; --sl-trail:#8A3413; --sl-oldrail:#6A2484; --soil-top:#3B2B1E; --soil-mid:#8A6A48; --soil-low:#B89D78; --t-low:#4C6A4F; --t-mid:#7F975F; --t-high:#D2BE86; --t-water:#B3C7CB; --t-contour:rgba(30,38,30,.28); --t-index:rgba(30,38,30,.55);
+  --clay:#C8C9C7; --t-line:#1E2A21; --r-major:#F4B23E; --r-road:#FFFFFF; --r-service:#ECE6DA; --r-trail:#C4562C; --r-oldrail:#9B3FB5; --r-rail:#3A3A3A; --sl-ink:#1B231E; --sl-halo:#FFFFFF; --sl-trail:#8A3413; --sl-oldrail:#6A2484; --soil-top:#3B2B1E; --soil-mid:#8A6A48; --soil-low:#B89D78; --t-low:#4C6A4F; --t-mid:#7F975F; --t-high:#D2BE86; --t-water:#B3C7CB; --t-contour:rgba(30,38,30,.28); --t-index:rgba(30,38,30,.55);
   --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
   --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-data:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
@@ -21,12 +21,12 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#101518; --surface:#161D21; --raised:#1D262B; --ink:#E4E9E4; --muted:#8F9C96; --line:#2B363B;
   --accent:#D9954F; --accent-ink:#1A1208; --danger:#E06B5C;
-  --clay:#B9AE9F; --t-line:#E9EEE6; --soil-top:#1E150E; --soil-mid:#4E3B29; --soil-low:#6E5A44; --t-low:#25382C; --t-mid:#4D6240; --t-high:#9C8B5C; --t-water:#1C2C33; --t-contour:rgba(0,0,0,.35); --t-index:rgba(0,0,0,.6);
+  --clay:#ABACAA; --t-line:#E9EEE6; --soil-top:#1E150E; --soil-mid:#4E3B29; --soil-low:#6E5A44; --t-low:#25382C; --t-mid:#4D6240; --t-high:#9C8B5C; --t-water:#1C2C33; --t-contour:rgba(0,0,0,.35); --t-index:rgba(0,0,0,.6);
   color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#101518; --surface:#161D21; --raised:#1D262B; --ink:#E4E9E4; --muted:#8F9C96; --line:#2B363B;
   --accent:#D9954F; --accent-ink:#1A1208; --danger:#E06B5C;
-  --clay:#B9AE9F; --t-line:#E9EEE6; --soil-top:#1E150E; --soil-mid:#4E3B29; --soil-low:#6E5A44; --t-low:#25382C; --t-mid:#4D6240; --t-high:#9C8B5C; --t-water:#1C2C33; --t-contour:rgba(0,0,0,.35); --t-index:rgba(0,0,0,.6);
+  --clay:#ABACAA; --t-line:#E9EEE6; --soil-top:#1E150E; --soil-mid:#4E3B29; --soil-low:#6E5A44; --t-low:#25382C; --t-mid:#4D6240; --t-high:#9C8B5C; --t-water:#1C2C33; --t-contour:rgba(0,0,0,.35); --t-index:rgba(0,0,0,.6);
   color-scheme:dark}
 
 html,body{height:100%}
@@ -694,7 +694,7 @@ scene.add(shadow);
 const terrainCanvas = document.createElement("canvas"), lineCanvas = document.createElement("canvas");
 const texture = new THREE.CanvasTexture(terrainCanvas), lineTexture = new THREE.CanvasTexture(lineCanvas);
 texture.anisotropy = lineTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-const clayMat = new THREE.MeshLambertMaterial({color:0xd3c8ba}); // plain modeling-clay surface under every layer
+const clayMat = new THREE.MeshLambertMaterial({color:0xc8c9c7}); // plain modeling-clay surface under every layer
 const terrain = new THREE.Mesh(geo, clayMat);
 scene.add(terrain);
 
