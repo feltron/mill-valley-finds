@@ -1,0 +1,308 @@
+{
+ "basemap": {
+  "url": "data/satellite/base.jpg",
+  "bbox": {
+   "west": -122.603,
+   "south": 37.863,
+   "east": -122.492,
+   "north": 37.951
+  },
+  "width": 4000,
+  "height": 3171
+ },
+ "satTiles": {
+  "r0c0": {
+   "url": "data/satellite/r0c0.jpg",
+   "bbox": {
+    "west": -122.60369999999999,
+    "east": -122.56530000000001,
+    "north": 37.95155,
+    "south": 37.92111666666667
+   },
+   "width": 3400,
+   "height": 3400
+  },
+  "r0c1": {
+   "url": "data/satellite/r0c1.jpg",
+   "bbox": {
+    "west": -122.5667,
+    "east": -122.5283,
+    "north": 37.95155,
+    "south": 37.92111666666667
+   },
+   "width": 3400,
+   "height": 3400
+  },
+  "r0c2": {
+   "url": "data/satellite/r0c2.jpg",
+   "bbox": {
+    "west": -122.52969999999999,
+    "east": -122.49130000000001,
+    "north": 37.95155,
+    "south": 37.92111666666667
+   },
+   "width": 3400,
+   "height": 3400
+  },
+  "r1c0": {
+   "url": "data/satellite/r1c0.jpg",
+   "bbox": {
+    "west": -122.60369999999999,
+    "east": -122.56530000000001,
+    "north": 37.922216666666664,
+    "south": 37.891783333333336
+   },
+   "width": 3400,
+   "height": 3400
+  },
+  "r1c1": {
+   "url": "data/satellite/r1c1.jpg",
+   "bbox": {
+    "west": -122.5667,
+    "east": -122.5283,
+    "north": 37.922216666666664,
+    "south": 37.891783333333336
+   },
+   "width": 3400,
+   "height": 3400
+  },
+  "r1c2": {
+   "url": "data/satellite/r1c2.jpg",
+   "bbox": {
+    "west": -122.52969999999999,
+    "east": -122.49130000000001,
+    "north": 37.922216666666664,
+    "south": 37.891783333333336
+   },
+   "width": 3400,
+   "height": 3400
+  },
+  "r2c0": {
+   "url": "data/satellite/r2c0.jpg",
+   "bbox": {
+    "west": -122.60369999999999,
+    "east": -122.56530000000001,
+    "north": 37.89288333333333,
+    "south": 37.86245
+   },
+   "width": 3400,
+   "height": 3400
+  },
+  "r2c1": {
+   "url": "data/satellite/r2c1.jpg",
+   "bbox": {
+    "west": -122.5667,
+    "east": -122.5283,
+    "north": 37.89288333333333,
+    "south": 37.86245
+   },
+   "width": 3400,
+   "height": 3400
+  },
+  "r2c2": {
+   "url": "data/satellite/r2c2.jpg",
+   "bbox": {
+    "west": -122.52969999999999,
+    "east": -122.49130000000001,
+    "north": 37.89288333333333,
+    "south": 37.86245
+   },
+   "width": 3400,
+   "height": 3400
+  }
+ },
+ "reliefTiles": {
+  "r0c0": {
+   "url": "data/relief/r0c0.jpg",
+   "bbox": {
+    "west": -122.60369999999999,
+    "east": -122.56530000000001,
+    "north": 37.95155,
+    "south": 37.92111666666667
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r0c1": {
+   "url": "data/relief/r0c1.jpg",
+   "bbox": {
+    "west": -122.5667,
+    "east": -122.5283,
+    "north": 37.95155,
+    "south": 37.92111666666667
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r0c2": {
+   "url": "data/relief/r0c2.jpg",
+   "bbox": {
+    "west": -122.52969999999999,
+    "east": -122.49130000000001,
+    "north": 37.95155,
+    "south": 37.92111666666667
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r1c0": {
+   "url": "data/relief/r1c0.jpg",
+   "bbox": {
+    "west": -122.60369999999999,
+    "east": -122.56530000000001,
+    "north": 37.922216666666664,
+    "south": 37.891783333333336
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r1c1": {
+   "url": "data/relief/r1c1.jpg",
+   "bbox": {
+    "west": -122.5667,
+    "east": -122.5283,
+    "north": 37.922216666666664,
+    "south": 37.891783333333336
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r1c2": {
+   "url": "data/relief/r1c2.jpg",
+   "bbox": {
+    "west": -122.52969999999999,
+    "east": -122.49130000000001,
+    "north": 37.922216666666664,
+    "south": 37.891783333333336
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r2c0": {
+   "url": "data/relief/r2c0.jpg",
+   "bbox": {
+    "west": -122.60369999999999,
+    "east": -122.56530000000001,
+    "north": 37.89288333333333,
+    "south": 37.86245
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r2c1": {
+   "url": "data/relief/r2c1.jpg",
+   "bbox": {
+    "west": -122.5667,
+    "east": -122.5283,
+    "north": 37.89288333333333,
+    "south": 37.86245
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r2c2": {
+   "url": "data/relief/r2c2.jpg",
+   "bbox": {
+    "west": -122.52969999999999,
+    "east": -122.49130000000001,
+    "north": 37.89288333333333,
+    "south": 37.86245
+   },
+   "width": 3400,
+   "height": 2695
+  }
+ },
+ "elevation": {
+  "west": -122.604,
+  "east": -122.4915,
+  "south": 37.862,
+  "north": 37.953,
+  "w": 3950,
+  "h": 4040,
+  "spacing": 2.5,
+  "coverage": 100,
+  "parts": [
+   {
+    "url": "data/elevation/0.png",
+    "y0": 0,
+    "h": 1010
+   },
+   {
+    "url": "data/elevation/1.png",
+    "y0": 1010,
+    "h": 1010
+   },
+   {
+    "url": "data/elevation/2.png",
+    "y0": 2020,
+    "h": 1010
+   },
+   {
+    "url": "data/elevation/3.png",
+    "y0": 3030,
+    "h": 1010
+   }
+  ]
+ },
+ "streets": {
+  "url": "data/streets.json",
+  "ways": 6507,
+  "source": "OpenStreetMap"
+ },
+ "layers": [
+  {
+   "id": "tamalpais-1897",
+   "name": "Tamalpais",
+   "year": "1897",
+   "credit": "USGS \u00b7 1:62,500",
+   "url": "data/maps/tamalpais-1897.jpg",
+   "bbox": {
+    "east": -122.492222,
+    "north": 37.95125,
+    "south": 37.8625,
+    "west": -122.61
+   },
+   "coverage": [
+    -122.75110000001058,
+    37.9999236111095,
+    -122.50108277777828,
+    37.9999236111095,
+    -122.50108277777828,
+    37.749930086665735,
+    -122.75110000001058,
+    37.749930086665735
+   ],
+   "shift": {
+    "e": 0,
+    "n": 0
+   }
+  },
+  {
+   "id": "san-rafael-1954",
+   "name": "San Rafael",
+   "year": "1954",
+   "credit": "USGS \u00b7 1:24,000",
+   "url": "data/maps/san-rafael-1954.jpg",
+   "bbox": {
+    "east": -122.492222,
+    "north": 37.95125,
+    "south": 37.8625,
+    "west": -122.61
+   },
+   "coverage": [
+    -122.62609305557274,
+    37.99992305555282,
+    -122.5010844444566,
+    37.99992305555282,
+    -122.5010844444566,
+    37.87492666666504,
+    -122.62609305557274,
+    37.87492666666504
+   ],
+   "shift": {
+    "e": 0,
+    "n": 0
+   }
+  }
+ ]
+}

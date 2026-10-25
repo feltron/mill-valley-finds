@@ -1,0 +1,57 @@
+rules_version = '2';
+// Mill Valley Finds: who can read and write what.
+// Paste this whole file into Firebase console → Firestore Database → Rules, then Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Private settings you create by hand in the console: config/secret {code} and config/admins {emails}.
+    // No visitor can read or change them; the rules below look them up.
+    match /config/{doc} {
+      allow read, write: if false;
+    }
+
+    function signedIn() { return request.auth != null; }
+    function isOwner() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails;
+    }
+    function hasPasscode() {
+      return signedIn() && exists(/databases/$(database)/documents/unlocked/$(request.auth.uid));
+    }
+    function canWrite() { return hasPasscode() || isOwner(); }
+
+    // A visitor proves they know the passcode by creating this record for themselves.
+    // Only that same visitor can read it back, so the passcode is never exposed.
+    match /unlocked/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.code == get(/databases/$(database)/documents/config/secret).data.code;
+      allow update, delete: if false;
+    }
+
+    function validFind(d) {
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 200
+        && d.notes is string && d.notes.size() <= 5000
+        && d.thumb is string && d.thumb.size() <= 20000;
+    }
+
+    // Finds: anyone can look; passcode holders can add, and change or delete their own; the owner can change anything.
+    match /finds/{id} {
+      allow read: if true;
+      allow create: if canWrite() && request.resource.data.createdBy == request.auth.uid && validFind(request.resource.data);
+      allow update: if validFind(request.resource.data) && (isOwner()
+        || (hasPasscode() && resource.data.createdBy == request.auth.uid && request.resource.data.createdBy == request.auth.uid));
+      allow delete: if isOwner() || (hasPasscode() && resource.data.createdBy == request.auth.uid);
+    }
+
+    // Photos, stored as small JPEG data in their own documents.
+    match /photos/{id} {
+      allow read: if true;
+      allow create: if canWrite() && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.data is string && request.resource.data.data.size() < 1000000;
+      allow delete: if isOwner() || (hasPasscode() && resource.data.createdBy == request.auth.uid);
+      allow update: if false;
+    }
+  }
+}

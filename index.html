@@ -1,0 +1,2227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mill Valley Finds</title>
+<meta name="description" content="Metal-detecting finds around Mill Valley and Mount Tamalpais on a 3D map.">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: full-height field station — 3D terrain stage on the left with a year strip beneath, a ledger panel of finds on the right; stacks map-over-ledger on phones. */
+:root{
+  --bg:#E9ECE6; --surface:#F7F8F4; --raised:#FFFFFF; --ink:#1A2320; --muted:#5D6A63; --line:#CBD2CA;
+  --accent:#A8682A; --accent-ink:#FFFFFF; --danger:#B23A2E;
+  --clay:#D3C8BA; --t-line:#1E2A21; --r-major:#F4B23E; --r-road:#FFFFFF; --r-service:#ECE6DA; --r-trail:#C4562C; --r-oldrail:#9B3FB5; --r-rail:#3A3A3A; --sl-ink:#1B231E; --sl-halo:#FFFFFF; --sl-trail:#8A3413; --sl-oldrail:#6A2484; --soil-top:#3B2B1E; --soil-mid:#8A6A48; --soil-low:#B89D78; --t-low:#4C6A4F; --t-mid:#7F975F; --t-high:#D2BE86; --t-water:#B3C7CB; --t-contour:rgba(30,38,30,.28); --t-index:rgba(30,38,30,.55);
+  --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-data:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101518; --surface:#161D21; --raised:#1D262B; --ink:#E4E9E4; --muted:#8F9C96; --line:#2B363B;
+  --accent:#D9954F; --accent-ink:#1A1208; --danger:#E06B5C;
+  --clay:#B9AE9F; --t-line:#E9EEE6; --soil-top:#1E150E; --soil-mid:#4E3B29; --soil-low:#6E5A44; --t-low:#25382C; --t-mid:#4D6240; --t-high:#9C8B5C; --t-water:#1C2C33; --t-contour:rgba(0,0,0,.35); --t-index:rgba(0,0,0,.6);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101518; --surface:#161D21; --raised:#1D262B; --ink:#E4E9E4; --muted:#8F9C96; --line:#2B363B;
+  --accent:#D9954F; --accent-ink:#1A1208; --danger:#E06B5C;
+  --clay:#B9AE9F; --t-line:#E9EEE6; --soil-top:#1E150E; --soil-mid:#4E3B29; --soil-low:#6E5A44; --t-low:#25382C; --t-mid:#4D6240; --t-high:#9C8B5C; --t-water:#1C2C33; --t-contour:rgba(0,0,0,.35); --t-index:rgba(0,0,0,.6);
+  color-scheme:dark}
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:400 14px/1.5 var(--f-body)}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.app{display:grid;grid-template-columns:minmax(0,1fr) 384px;height:100%;min-height:0}
+.stage{position:relative;display:grid;grid-template-rows:minmax(0,1fr) auto;min-width:0;min-height:0;border-right:1px solid var(--line)}
+.map{position:relative;overflow:hidden;min-height:0;cursor:grab}
+.map.picking{cursor:crosshair}
+.map canvas{display:block;width:100%;height:100%}
+.labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.place{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;font:600 12px/1.1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--ink);text-shadow:0 0 3px var(--bg),0 0 6px var(--bg);text-align:center}
+.place small{display:block;font:500 10px/1.3 var(--f-data);letter-spacing:0;text-transform:none;color:var(--muted)}
+.place.water{font-style:italic;color:var(--muted);letter-spacing:.2em}
+.tip{position:absolute;pointer-events:none;background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12px;line-height:1.35;box-shadow:0 4px 14px rgba(0,0,0,.18);transform:translate(12px,-50%);max-width:220px}
+.tip b{display:block;font-weight:600}
+.tip span{color:var(--muted);font-family:var(--f-data);font-size:11px}
+
+.mapbar{position:absolute;top:max(12px,env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px));right:12px;display:flex;gap:8px;align-items:flex-start;pointer-events:none;flex-wrap:wrap}
+.brand{pointer-events:auto;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+.brand h1{margin:0;font:800 26px/0.95 var(--f-display);letter-spacing:.02em;text-transform:uppercase;text-wrap:balance}
+.brand p{margin:3px 0 0;font:500 11px/1.3 var(--f-data);color:var(--muted)}
+.mapctl{margin-left:auto;display:flex;gap:6px;pointer-events:auto}
+.iconbtn{background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:8px;height:34px;padding:0 10px;font-size:12px;font-weight:600;cursor:pointer}
+.iconbtn:hover{border-color:var(--muted)}
+.imgpanel{position:absolute;top:70px;right:12px;width:min(340px,calc(100% - 24px));max-height:calc(100% - 82px);overflow:auto;background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);display:grid;gap:12px;font-size:13px;z-index:4}
+.imgpanel h3{margin:0;font:800 20px/1 var(--f-display);text-transform:uppercase}
+.imgpanel ol{margin:0;padding-left:18px;display:grid;gap:6px}
+.imgpanel a{color:var(--accent);font-weight:600}
+.imgpanel .drop{min-height:90px}
+.lp{display:grid;gap:12px}
+.tilebox{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.tilegrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.tcell{position:relative;display:grid;gap:3px;align-content:start;border:1px dashed var(--line);border-radius:6px;padding:6px;min-height:84px;font-size:11px;background:var(--surface)}
+.tcell.done{border-style:solid;background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.tcell.over{border-color:var(--accent)}
+.tcell .tn{font:800 18px/1 var(--f-display);color:var(--muted)}
+.tcell a{font-weight:600}
+.tpick{position:relative;color:var(--ink);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.tpick input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.tcell .ts{color:var(--muted)}
+.lcount{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:4px;border-radius:999px;background:var(--ink);color:var(--bg);font:600 11px/1 var(--f-data)}
+.lrows{list-style:none;margin:0;padding:0;display:grid}
+.lrow{display:grid;grid-template-columns:38px minmax(0,1fr) 30px;column-gap:8px;row-gap:2px;align-items:center;padding:9px 4px}
+.lrow+.lrow{border-top:1px solid var(--line)}
+.lrow .lmeta{min-width:0}
+.lrow .lmeta b{display:block;font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lrow .lmeta span{display:block;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lrow .lop{grid-column:2;width:100%;min-width:0;accent-color:var(--accent);margin:0}
+.lrow .lpct{grid-column:3;font:500 10px var(--f-data);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.lrow:not(.on) .lop,.lrow:not(.on) .lpct{opacity:.4}
+.lrow.missing{grid-template-columns:38px minmax(0,1fr) auto}
+.lrow.missing .lmeta b{color:var(--muted)}
+.lrow .btn{padding:6px 10px;font-size:12px}
+.lrow .lacts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 0 46px}
+.lmore{border:0;background:none;cursor:pointer;font-size:16px;line-height:1;color:var(--muted);border-radius:6px;height:28px;width:28px}
+.lmore:hover,.lmore[aria-expanded="true"]{background:var(--surface);color:var(--ink)}
+.lsw{position:relative;display:inline-block;width:34px;height:20px}
+.lsw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+.lsw span{position:absolute;inset:0;border-radius:999px;background:var(--line);transition:background .15s}
+.lsw span::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--raised);box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .15s}
+.lsw input:checked+span{background:var(--accent)}
+.lsw input:checked+span::after{transform:translateX(14px)}
+.lsw input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.lsw.idle{border-radius:999px;border:1px dashed var(--line)}
+.lsw.clay{width:20px;height:20px;margin-left:7px;border-radius:50%;background:var(--clay);box-shadow:inset 0 -3px 5px rgba(0,0,0,.18)}
+.slabels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.slabel{position:absolute;left:0;top:0;white-space:nowrap;font:600 11px/1 var(--f-body);color:var(--sl-ink);text-shadow:0 0 2px var(--sl-halo),0 0 4px var(--sl-halo),0 0 6px var(--sl-halo)}
+.slabel.major{font-size:12px;font-weight:700}
+.slabel.trail{color:var(--sl-trail);font-style:italic;font-weight:500}
+.slabel.oldrail{color:var(--sl-oldrail);font-style:italic}
+#lbName{display:block}
+.elevbox{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:12px}
+.elevbox .note{margin:0}
+.step{margin:0;font:600 11px/1.2 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.row.wrap{flex-wrap:wrap}
+.layers{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.layer{display:grid;grid-template-columns:52px minmax(0,1fr);gap:10px;align-items:center;width:100%;text-align:left;background:none;border:1px solid transparent;border-radius:8px;padding:7px 8px;cursor:pointer}
+.layer:hover{border-color:var(--line)}
+.layer[aria-pressed="true"]{border-color:var(--ink);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.layer .yr{font:800 22px/1 var(--f-display);font-variant-numeric:tabular-nums;color:var(--ink)}
+.layer .yr.word{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.layer b{display:block;font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.layer span span{font-size:11px;color:var(--muted)}
+.nudge{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,36px);gap:4px;justify-content:center}
+.nudge button{border:1px solid var(--line);background:var(--raised);border-radius:6px;cursor:pointer;font-size:15px}
+.nudge button:hover{border-color:var(--muted)}
+.nudge .off{grid-column:2;grid-row:2;display:grid;place-items:center;font:500 9px/1.2 var(--f-data);color:var(--muted);text-align:center}
+.layerbadge{grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px;max-width:300px}
+.layerbadge b{font:800 30px/.9 var(--f-display);color:var(--ink);font-variant-numeric:tabular-nums}
+#lbName{color:var(--ink);font:600 12px/1.3 var(--f-body)}
+.calib{position:absolute;inset:0;background:var(--surface);display:grid;grid-template-rows:auto minmax(0,1fr);z-index:6}
+.calib-bar{display:flex;gap:10px 16px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line)}
+.calib-bar b{display:block;font:800 18px/1 var(--f-display);text-transform:uppercase}
+.calib-bar #calibMsg{font-size:13px;color:var(--muted)}
+.cchips{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+.cchip{border:1px solid var(--line);background:var(--raised);border-radius:999px;padding:4px 10px;font:600 12px var(--f-body);cursor:pointer;color:var(--muted)}
+.cchip.done{color:var(--ink)}
+.cchip.cur{border-color:var(--accent);color:var(--accent)}
+.calib-body{display:grid;grid-template-columns:minmax(0,1fr) 280px;min-height:0}
+.calib-stage{position:relative;min-height:0;min-width:0;background:var(--bg);display:grid;place-items:center;overflow:hidden}
+#calibCanvas{cursor:crosshair;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+.loupe{position:absolute;border-radius:50%;border:2px solid var(--ink);box-shadow:0 8px 24px rgba(0,0,0,.3);cursor:crosshair;background:#fff}
+.calib-side{padding:12px;display:grid;gap:10px;align-content:start;overflow:auto;border-left:1px solid var(--line);min-width:0}
+.calib-side select{background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
+.cpt{display:grid;grid-template-columns:18px 1fr 1fr;gap:6px;align-items:center}
+.cpt .cnum{font:800 15px/1 var(--f-display);color:var(--muted);text-align:center}
+.cpt input{background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:6px 7px;width:100%;min-width:0;font:400 12px var(--f-data)}
+.cpt-h{display:grid;grid-template-columns:18px 1fr 1fr;gap:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.map.sat .place{color:#fff;text-shadow:0 0 3px #000,0 0 8px rgba(0,0,0,.8)}
+.map.sat .place small,.map.sat .place.water{color:#E8ECE6}
+.pickbanner{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-weight:600;font-size:13px;display:flex;gap:10px;align-items:center;white-space:nowrap}
+.pickbanner button{background:none;border:1px solid currentColor;color:inherit;border-radius:999px;padding:2px 10px;cursor:pointer;font-size:12px}
+.legends{position:absolute;right:max(12px,env(safe-area-inset-right,0px));bottom:12px;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.legends>*{pointer-events:auto}
+.legends{max-width:calc(100% - 24px)}
+.legend{background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:500 10px/1.4 var(--f-data);color:var(--muted);display:grid;gap:4px}
+.ramp{width:140px;height:8px;border-radius:2px;background:linear-gradient(90deg,var(--t-water) 0 4%,var(--t-low) 4%,var(--t-mid) 50%,var(--t-high))}
+.ramp-l{display:flex;justify-content:space-between}
+
+/* timeline */
+.timeline{border-top:1px solid var(--line);background:var(--surface);padding-block:8px 6px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:16px}
+.tl-head{display:flex;justify-content:space-between;align-items:baseline;font:600 11px/1 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.tl-head span:last-child{font:400 11px var(--f-data);letter-spacing:0;text-transform:none}
+.timeline svg{display:block;width:100%;height:58px;overflow:visible}
+.timeline text{font:400 10px var(--f-data);fill:var(--muted)}
+.tl-dot{cursor:pointer;stroke:var(--surface);stroke-width:1.5}
+.tl-dot.sel{stroke:var(--ink);stroke-width:2}
+
+/* panel */
+.panel{display:flex;flex-direction:column;min-height:0;background:var(--surface)}
+.panel-scroll{overflow-y:auto;min-height:0;flex:1;padding-block:16px 24px;padding-left:16px;padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+.row{display:flex;gap:8px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--raised);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;font-size:13px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.danger{color:var(--danger)}
+.btn.ghost{background:none;border-color:transparent;padding-inline:8px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-radius:8px;background:var(--raised)}
+.stat{padding:10px 12px;min-width:0}
+.stat+.stat{border-left:1px solid var(--line)}
+.stat b{display:block;font:800 24px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.stat span{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.section-h{font:600 12px/1 var(--f-display);letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--raised);border-radius:999px;padding:4px 10px 4px 8px;font-size:12px;cursor:pointer}
+.chip[aria-pressed="false"]{opacity:.45}
+.chip i{width:9px;height:9px;border-radius:50%;display:inline-block;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.chip em{font-style:normal;color:var(--muted);font-family:var(--f-data);font-size:11px}
+.listbar{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.listbar select{background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.item{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:4px}
+.item:hover{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.item.sel{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.thumb{width:44px;height:44px;border-radius:6px;object-fit:cover;background:var(--bg);display:grid;place-items:center;border:1px solid var(--line);overflow:hidden}
+.thumb i{width:12px;height:12px;border-radius:50%;display:block}
+.item-t{min-width:0}
+.item-t b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-t span{font-size:12px;color:var(--muted)}
+.item-m{text-align:right;font:400 11px/1.4 var(--f-data);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font:600 9px/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);border-radius:3px;padding:2px 4px;margin-left:6px;vertical-align:2px;color:var(--muted)}
+.empty{border:1px dashed var(--line);border-radius:8px;padding:20px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
+.note{font-size:12px;color:var(--muted)}
+
+/* detail */
+.detail{position:absolute;left:max(12px,env(safe-area-inset-left,0px));bottom:12px;width:min(340px,calc(100% - 24px));max-height:calc(100% - 110px);overflow:auto;background:var(--raised);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.22)}
+.detail .ph{width:100%;aspect-ratio:4/3;max-width:100%;object-fit:cover;display:block;background:var(--bg)}
+.detail .noph{aspect-ratio:4/3;display:grid;place-items:center;background:var(--bg);color:var(--muted);font-size:12px}
+.detail .noph i{width:28px;height:28px;border-radius:50%;display:block;margin:0 auto 6px}
+.detail .body{padding:14px 16px 16px;display:grid;gap:10px}
+.detail h2{margin:0;font:800 24px/1 var(--f-display);text-transform:uppercase;letter-spacing:.02em;text-wrap:balance}
+.kv{display:grid;grid-template-columns:96px minmax(0,1fr);gap:4px 10px;margin:0;font-size:13px}
+.kv dt{color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding-top:2px}
+.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.mono{font-family:var(--f-data);font-size:12px;font-variant-numeric:tabular-nums}
+.closex{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--raised);cursor:pointer;font-size:16px;line-height:1}
+.confirm{border:1px solid var(--danger);border-radius:8px;padding:10px;display:grid;gap:8px;font-size:13px}
+
+/* form */
+form{display:grid;gap:14px}
+.field{display:grid;gap:5px;min-width:0}
+.field label,.field .lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.field input,.field select,.field textarea{background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
+.field textarea{min-height:84px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.drop{border:1px dashed var(--line);border-radius:8px;background:var(--raised);display:grid;place-items:center;min-height:140px;cursor:pointer;position:relative;overflow:hidden;text-align:center;color:var(--muted);font-size:13px;padding:12px}
+.drop.over{border-color:var(--accent)}
+.drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.hint{font-size:12px;color:var(--muted)}
+.hint.ok{color:var(--accent)}
+.err{color:var(--danger);font-size:13px}
+.form-h{display:flex;justify-content:space-between;align-items:center}
+.form-h h2{margin:0;font:800 24px/1 var(--f-display);text-transform:uppercase}
+
+@media (max-width:860px){
+  html,body{height:auto}
+  .app{grid-template-columns:1fr;height:auto}
+  .stage{border-right:0;border-bottom:1px solid var(--line)}
+  .map{height:62vh;min-height:360px}
+  .panel-scroll{overflow:visible}
+  .brand h1{font-size:21px}
+  .legend{display:none}
+  .legend.layerbadge{display:grid;max-width:100%;font-size:9px;padding:5px 8px}
+  .layerbadge b{font-size:20px}
+  .calib{position:fixed;z-index:20;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  .calib-body{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}
+  .calib-side{border-left:0;border-top:1px solid var(--line);max-height:42vh}
+  .cchips{margin-left:0}
+  .detail{position:fixed;left:max(8px,env(safe-area-inset-left,0px));right:max(8px,env(safe-area-inset-right,0px));width:auto;bottom:calc(8px + env(safe-area-inset-bottom,0px));max-height:70vh;z-index:5}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* hosted site: map layers are bundled, so hide the import tools */
+.hosted #elevBtn,.hosted #elevRevert,.hosted #addHist,.hosted #histNote,.hosted .lrow.missing,.hosted .lmore{display:none}
+.unlock{display:grid;gap:6px;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--raised)}
+.unlock label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.unlock input{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-width:0;flex:1}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="stage">
+    <div class="map" id="map">
+      <div class="labels" id="labels"></div>
+      <div class="mapbar">
+        <div class="brand">
+          <h1>Mill Valley Finds</h1>
+          <p>Metal detecting log · Mt. Tamalpais &amp; the valleys</p>
+        </div>
+        <div class="mapctl">
+          <button class="iconbtn" id="layerBtn" type="button" aria-expanded="false" aria-controls="layerPanel">Layers <span class="lcount" id="layerBtnLabel">0</span></button>
+          <button class="iconbtn" id="resetView" type="button">Reset view</button>
+          <button class="iconbtn" id="topView" type="button">Top</button>
+        </div>
+      </div>
+      <div class="legends">
+        <div class="legend" id="elevLegend" aria-hidden="true">
+        <div>Elevation · 100 ft contours</div>
+        <div class="ramp"></div>
+        <div class="ramp-l"><span>0</span><span>1,300</span><span>2,571 ft</span></div>
+        </div>
+        <div class="legend layerbadge" id="layerBadge" hidden><b id="lbYear"></b><span><span id="lbName"></span><span id="lbCredit"></span></span></div>
+      </div>
+      <div class="tip" id="tip" hidden></div>
+      <div class="imgpanel" id="layerPanel" hidden>
+        <div class="row" style="justify-content:space-between"><h3>Map layers</h3><button class="btn ghost" type="button" id="layerClose">Close</button></div>
+
+        <div class="lp" id="lpList">
+          <p class="hint" style="margin:0">Turn layers on and set how strongly each one shows. Higher layers draw over lower ones; with everything off you see bare clay.</p>
+          <ul class="lrows" id="layerList"></ul>
+          <button class="btn primary" type="button" id="addHist">Add a historical map</button>
+          <p class="hint" id="histNote">Old USGS maps of Mill Valley are free on <a href="https://ngmdb.usgs.gov/topoview/" target="_blank" rel="noopener">topoView</a>: Tamalpais 1897 and 1941, Mt. Tamalpais 1950, San Rafael 1954.</p>
+          <div class="elevbox">
+            <h4 class="step">Elevation data</h4>
+            <p class="note" id="elevText">USGS 10 m data, sampled about every 100 m</p>
+            <div class="row wrap"><button class="btn" type="button" id="elevBtn">Load high-resolution data</button><button class="btn ghost" type="button" id="elevRevert" hidden>Use built-in data</button></div>
+          </div>
+        </div>
+
+        <div class="lp" id="lpElev" hidden>
+          <h4 class="step">High-resolution elevation</h4>
+          <ol>
+            <li>Download all four quarters of the circle from USGS: <a href="https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?bbox=-122.60400,37.90725,-122.54750,37.95300&amp;bboxSR=4326&amp;imageSR=4326&amp;size=2508,2031&amp;format=tiff&amp;pixelType=F32&amp;compression=LZ77&amp;interpolation=RSP_BilinearInterpolation&amp;f=image" target="_blank" rel="noopener">Northwest</a>, <a href="https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?bbox=-122.54800,37.90725,-122.49150,37.95300&amp;bboxSR=4326&amp;imageSR=4326&amp;size=2508,2031&amp;format=tiff&amp;pixelType=F32&amp;compression=LZ77&amp;interpolation=RSP_BilinearInterpolation&amp;f=image" target="_blank" rel="noopener">Northeast</a>, <a href="https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?bbox=-122.60400,37.86200,-122.54750,37.90775&amp;bboxSR=4326&amp;imageSR=4326&amp;size=2508,2031&amp;format=tiff&amp;pixelType=F32&amp;compression=LZ77&amp;interpolation=RSP_BilinearInterpolation&amp;f=image" target="_blank" rel="noopener">Southwest</a>, <a href="https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?bbox=-122.54800,37.86200,-122.49150,37.90775&amp;bboxSR=4326&amp;imageSR=4326&amp;size=2508,2031&amp;format=tiff&amp;pixelType=F32&amp;compression=LZ77&amp;interpolation=RSP_BilinearInterpolation&amp;f=image" target="_blank" rel="noopener">Southeast</a>. Each is a compressed .tif of about 10–20 MB at 2.5 m per sample, from the best data USGS has here (lidar where available). USGS can take up to a minute to build each one.</li>
+            <li>Drop all four here at once (or one at a time; each adds its quarter).</li>
+          </ol>
+          <div class="drop" id="elevDrop"><span>Drop GeoTIFF elevation files, or tap to choose</span><input type="file" id="fElev" accept=".tif,.tiff,image/tiff" multiple aria-label="Elevation GeoTIFF files"></div>
+          <p class="hint" id="elevHint"><span id="elevHintText"></span></p>
+          <p class="hint">1-meter lidar tiles from the <a href="https://apps.nationalmap.gov/downloader/" target="_blank" rel="noopener">National Map Downloader</a> work too. Drop every tile that touches the circle at once; they’re combined and resampled to the 2.5 m grid.</p>
+          <div class="row"><button class="btn ghost" type="button" id="elevBack">Back</button></div>
+        </div>
+
+        <div class="lp" id="lpSat" hidden>
+          <h4 class="step">Satellite imagery</h4>
+          <ol>
+            <li>Open <a id="naipLink" href="https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPPlus/ImageServer/exportImage?bbox=-122.603,37.863,-122.492,37.951&amp;bboxSR=4326&amp;imageSR=4326&amp;size=4000,3171&amp;format=jpg&amp;f=image" target="_blank" rel="noopener">this USGS aerial image</a> and save it (it’s sized to cover the 3-mile circle).</li>
+            <li>Drop it here.</li>
+          </ol>
+          <div class="drop" id="satDrop"><span id="satText">Drop the saved image or tap to choose</span><input type="file" id="fSat" accept="image/*" aria-label="Satellite image"></div>
+          <span class="hint" id="satHint">Public-domain orthoimagery from USGS / USDA NAIP.</span>
+          <div class="tilebox">
+            <h4 class="step">Sharper imagery · about 1 m</h4>
+            <p class="hint">For detail that matches the 5 m terrain, add nine 1 m tiles on top of the image above. Open each tile’s link, save the image, and drop it on the same square. Each one sharpens its part of the map as soon as it’s added.</p>
+            <div class="tilegrid" id="tileGrid"></div>
+            <span class="note" id="tileCount"></span>
+            <span class="hint" id="tileHint"></span>
+          </div>
+          <div class="row"><button class="btn ghost" type="button" id="satBack">Back</button></div>
+        </div>
+
+        <div class="lp" id="lpStreets" hidden>
+          <h4 class="step">Streets &amp; trails · OpenStreetMap</h4>
+          <ol>
+            <li>Open the OpenStreetMap download from any one of these servers (they hold the same data; if one won’t connect or says it’s busy, try the next): <span id="osmLinks"></span>. It asks for every road, trail and railroad within 3 miles of City Hall, including abandoned rail grades. It can take a minute and ends in a long page of text.</li>
+            <li>Save that page as a file (File → Save Page As, or ⌘S).</li>
+            <li>Drop the file here.</li>
+          </ol>
+          <div class="drop" id="streetDrop"><span>Drop the saved file, or tap to choose</span><input type="file" id="fStreets" aria-label="OpenStreetMap data file"></div>
+          <span class="hint" id="streetHint"></span>
+          <p class="hint">If none of them load, open the same search in <a id="osmTurbo" href="#" target="_blank" rel="noopener">Overpass Turbo</a>, press Run, then choose Export → GeoJSON → Download. If every server refuses to connect, your network may block them; a VPN or work network is the usual cause.</p>
+          <div class="row"><button class="btn ghost" type="button" id="streetsBack">Back</button></div>
+        </div>
+
+        <div class="lp" id="lpRelief" hidden>
+          <h4 class="step">Lidar relief · about 1 m</h4>
+          <p class="hint">Shaded relief of the bare ground, made by USGS from lidar with trees and buildings removed. Old roadbeds, building pads, ditches and fence lines show up as faint lines and terraces, even under forest. Open each tile’s link, save the image, and drop it on the same square.</p>
+          <div class="tilegrid" id="reliefGrid"></div>
+          <span class="note" id="reliefCount"></span>
+          <span class="hint" id="reliefHint"></span>
+          <div class="row"><button class="btn ghost" type="button" id="reliefBack">Back</button></div>
+        </div>
+
+        <div class="lp" id="lpImport" hidden>
+          <h4 class="step">Step 1 · Choose a scan</h4>
+          <ol>
+            <li>Search <a href="https://ngmdb.usgs.gov/topoview/" target="_blank" rel="noopener">topoView</a> for Mill Valley, CA and pick a map.</li>
+            <li>Download the <b>KMZ</b> (it lines up automatically) or the <b>JPEG</b> (you’ll mark its four corners).</li>
+            <li>Drop it here. Other scanned maps work too.</li>
+          </ol>
+          <div class="drop" id="histDrop"><span>Drop a KMZ, JPEG or PNG, or tap to choose</span><input type="file" id="fHist" accept=".kmz,image/jpeg,image/png,image/webp" aria-label="Historical map file"></div>
+          <span class="hint" id="histHint"></span>
+          <div class="row"><button class="btn ghost" type="button" id="histBack">Back</button></div>
+        </div>
+
+        <div class="lp" id="lpAlign" hidden>
+          <h4 class="step" id="alignStep">Line it up</h4>
+          <div class="two">
+            <div class="field"><label for="lName">Map name</label><input id="lName" placeholder="Tamalpais"></div>
+            <div class="field"><label for="lYear">Year</label><input id="lYear" inputmode="numeric" placeholder="1897"></div>
+          </div>
+          <div class="field"><label for="lBlend">Blend with contours</label><input type="range" id="lBlend" min="0" max="100" step="1"></div>
+          <div class="field">
+            <span class="lbl">Nudge the map</span>
+            <div class="nudge">
+              <button type="button" data-d="0,1" style="grid-column:2;grid-row:1" aria-label="Move north">↑</button>
+              <button type="button" data-d="-1,0" style="grid-column:1;grid-row:2" aria-label="Move west">←</button>
+              <span class="off" id="nOff">0 m</span>
+              <button type="button" data-d="1,0" style="grid-column:3;grid-row:2" aria-label="Move east">→</button>
+              <button type="button" data-d="0,-1" style="grid-column:2;grid-row:3" aria-label="Move south">↓</button>
+            </div>
+            <div class="row" style="justify-content:center">
+              <label class="note row" for="nStep">Step <select id="nStep" style="background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:3px 6px"><option value="5">5 m</option><option value="25" selected>25 m</option><option value="100">100 m</option></select></label>
+              <button class="btn ghost" type="button" id="nReset">Reset</button>
+            </div>
+          </div>
+          <p class="hint">Compare creeks, ridgelines and old roads with the contours. Arrow keys nudge too. USGS maps made before the 1980s use an older survey datum (NAD27) that can sit about 100 m off.</p>
+          <p class="err" id="alignErr" hidden></p>
+          <div class="row"><button class="btn primary" type="button" id="alignSave">Save map</button><button class="btn ghost" type="button" id="alignCancel">Cancel</button></div>
+        </div>
+      </div>
+
+      <div class="calib" id="calib" hidden>
+        <div class="calib-bar">
+          <div><b>Step 2 · Mark four points</b><span id="calibMsg"></span></div>
+          <div class="cchips" id="calibChips"></div>
+          <button class="btn ghost" type="button" id="calibCancel">Cancel</button>
+        </div>
+        <div class="calib-body">
+          <div class="calib-stage" id="calibStage"><canvas id="calibCanvas"></canvas><canvas id="loupe" class="loupe" hidden></canvas></div>
+          <div class="calib-side">
+            <div class="field"><label for="cPreset">Map sheet</label><select id="cPreset"></select></div>
+            <p class="hint" id="cPresetHint"></p>
+            <div class="cpt-h"><span></span><span>Latitude</span><span>Longitude</span></div>
+            <div class="cpt"><span class="cnum">1</span><input id="cLat0" inputmode="decimal" placeholder="Lat" aria-label="Point 1 latitude"><input id="cLon0" inputmode="decimal" placeholder="Lon" aria-label="Point 1 longitude"></div>
+            <div class="cpt"><span class="cnum">2</span><input id="cLat1" inputmode="decimal" placeholder="Lat" aria-label="Point 2 latitude"><input id="cLon1" inputmode="decimal" placeholder="Lon" aria-label="Point 2 longitude"></div>
+            <div class="cpt"><span class="cnum">3</span><input id="cLat2" inputmode="decimal" placeholder="Lat" aria-label="Point 3 latitude"><input id="cLon2" inputmode="decimal" placeholder="Lon" aria-label="Point 3 longitude"></div>
+            <div class="cpt"><span class="cnum">4</span><input id="cLat3" inputmode="decimal" placeholder="Lat" aria-label="Point 4 latitude"><input id="cLon3" inputmode="decimal" placeholder="Lon" aria-label="Point 4 longitude"></div>
+            <button class="btn primary" type="button" id="calibNext" disabled>Fit to terrain</button>
+            <p class="err" id="calibErr" hidden></p>
+          </div>
+        </div>
+      </div>
+      <div class="pickbanner" id="pickBanner" hidden>Click the map where you found it <button type="button" id="pickCancel">Cancel</button></div>
+      <div class="detail" id="detail" hidden></div>
+    </div>
+    <div class="timeline">
+      <div class="tl-head"><span>Estimated age</span><span id="tlRange"></span></div>
+      <svg id="tl" role="img" aria-label="Finds by estimated year"></svg>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="panel-scroll" id="listView">
+      <div class="row" style="justify-content:space-between">
+        <h2 class="section-h">The ledger</h2>
+        <button class="btn primary" id="addBtn" type="button">Log a find</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><b id="sCount">0</b><span>Finds</span></div>
+        <div class="stat"><b id="sOldest">—</b><span>Oldest</span></div>
+        <div class="stat"><b id="sHigh">—</b><span>Highest ft</span></div>
+      </div>
+      <div class="chips" id="chips"></div>
+      <div class="listbar">
+        <h3 class="section-h">Finds</h3>
+        <label class="row note">Sort
+          <select id="sort">
+            <option value="found">Date found</option>
+            <option value="age">Oldest first</option>
+            <option value="name">Name</option>
+            <option value="elev">Elevation</option>
+          </select>
+        </label>
+      </div>
+      <ul class="list" id="list"></ul>
+      <form class="unlock" id="unlockForm" hidden>
+        <label for="passcode">Passcode</label>
+        <div class="row"><input id="passcode" type="password" autocomplete="off" aria-describedby="unlockMsg"><button class="btn primary" type="submit">Unlock</button></div>
+        <p class="hint" id="unlockMsg" style="margin:0">Enter the passcode from the map’s owner to add finds from this device.</p>
+      </form>
+      <p class="note" id="status">Connecting…</p>
+      <p class="note" id="authLine"></p>
+    </div>
+
+    <div class="panel-scroll" id="formView" hidden>
+      <div class="form-h">
+        <h2 id="formTitle">Log a find</h2>
+        <button class="btn ghost" type="button" id="formCancel">Cancel</button>
+      </div>
+      <form id="form" novalidate>
+        <div class="field">
+          <span class="lbl">Photo</span>
+          <div class="drop" id="drop">
+            <span id="dropText">Drop a photo or tap to choose.<br>Location and date are read from the photo when it has them.</span>
+            <img id="dropImg" alt="" hidden>
+            <input type="file" id="fPhoto" accept="image/*" aria-label="Photo of the item">
+          </div>
+          <span class="hint" id="photoHint"></span>
+        </div>
+        <div class="two">
+          <div class="field">
+            <label for="fCat">Category</label>
+            <input id="fCat" list="catList" placeholder="Coin" required autocomplete="off">
+            <datalist id="catList"></datalist>
+          </div>
+          <div class="field">
+            <label for="fAge">Estimated age</label>
+            <input id="fAge" placeholder="c. 1906, 1890s…">
+          </div>
+        </div>
+        <div class="field">
+          <label for="fName">Item name</label>
+          <input id="fName" placeholder="Barber dime" required>
+        </div>
+        <div class="field">
+          <label for="fDate">Date found</label>
+          <input id="fDate" type="date">
+        </div>
+        <div class="field">
+          <span class="lbl">Where it was found</span>
+          <div class="two">
+            <input id="fLat" inputmode="decimal" placeholder="Latitude 37.9060" aria-label="Latitude">
+            <input id="fLon" inputmode="decimal" placeholder="Longitude −122.5449" aria-label="Longitude">
+          </div>
+          <div class="row" style="flex-wrap:wrap">
+            <button class="btn" type="button" id="pickBtn">Pick on map</button>
+            <span class="hint" id="locHint"></span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="fNotes">Notes</label>
+          <textarea id="fNotes" placeholder="Depth, signal, condition, who was with you…"></textarea>
+        </div>
+        <p class="err" id="formErr" hidden></p>
+        <div class="row">
+          <button class="btn primary" type="submit" id="saveBtn">Save find</button>
+          <button class="btn ghost" type="button" id="formCancel2">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script>
+let DEM = {"w":107,"h":72,"north":37.95125,"south":37.8625,"west":-122.61,"east":-122.492222,"center":[37.907426,-122.547754],"radiusKm":4.828032,"z":[384,374,362,339,313,277,269,262,291,311,282,276,240,240,257,295,285,270,244,248,252,258,196,111,111,111,111,111,121,158,155,126,77,54,83,96,134,127,150,117,84,53,58,67,34,30,54,54,54,34,18,12,7,4,3,4,4,3,1,2,3,5,6,3,3,13,9,12,16,26,45,63,63,32,16,30,47,24,24,27,49,90,63,84,97,95,80,65,33,32,37,37,37,37,37,34,21,34,25,47,59,27,27,24,18,33,59,384,374,362,339,313,277,269,262,291,311,282,276,240,240,257,295,285,270,244,248,252,258,282,199,117,117,117,117,128,129,179,141,125,71,96,144,162,143,126,94,72,42,28,22,20,19,21,23,20,18,15,8,5,5,4,3,3,3,2,1,3,3,3,2,2,4,6,6,6,8,14,24,24,13,11,12,13,13,25,58,61,64,51,44,53,55,64,57,28,16,24,24,24,24,14,31,21,34,25,47,59,27,27,24,18,33,59,384,374,362,339,313,277,269,262,291,311,282,276,240,240,257,295,285,270,244,248,252,258,282,281,228,167,167,167,185,121,171,165,104,71,109,149,128,100,95,57,52,33,34,62,53,38,20,31,26,18,10,24,22,6,4,3,2,2,1,0,3,3,1,2,2,4,5,5,23,15,34,35,24,13,8,8,7,13,36,36,26,45,30,19,22,45,57,33,21,12,13,13,13,9,4,31,21,34,25,47,59,27,27,24,18,33,59,384,374,362,339,313,277,269,262,291,311,282,276,240,240,257,295,285,270,244,248,252,258,282,281,289,265,219,219,209,156,185,183,130,101,93,151,148,101,84,107,82,55,55,86,56,36,38,54,64,39,12,41,36,13,11,31,6,4,3,3,2,1,1,1,3,3,5,10,22,52,59,63,42,25,12,4,4,4,6,8,31,9,9,11,15,33,40,18,6,6,7,7,4,5,4,31,21,34,25,47,59,27,27,24,18,33,59,384,374,362,339,313,277,269,262,291,311,282,276,240,240,257,295,285,270,244,248,252,258,282,281,289,311,294,273,224,194,226,215,191,139,89,128,174,136,126,127,96,64,94,98,70,43,72,82,67,33,15,38,43,18,23,37,12,5,3,4,3,3,3,3,1,2,7,36,44,50,47,34,22,22,28,11,3,3,3,4,4,4,5,6,13,39,14,9,3,3,3,3,1,5,4,31,21,34,25,47,59,27,27,24,18,33,59,384,374,362,339,313,277,269,262,291,311,282,276,240,240,257,295,285,270,244,248,252,258,282,281,289,311,314,280,258,244,248,185,149,117,97,122,190,180,173,141,100,116,137,131,88,76,107,111,76,49,25,49,47,38,31,18,10,16,15,25,5,4,3,3,3,2,4,5,14,13,36,11,3,6,14,13,4,4,4,4,3,4,4,19,27,8,12,3,2,3,4,3,1,5,4,31,21,34,25,47,59,27,27,24,18,33,59,373,384,374,365,341,325,301,294,324,295,259,246,245,250,254,276,282,327,303,284,258,262,290,330,343,333,354,309,292,279,232,162,111,110,114,155,183,233,198,157,145,157,175,149,120,134,126,99,69,44,43,38,65,69,74,38,21,64,68,53,17,13,4,3,3,1,3,3,4,4,4,2,0,1,1,1,3,3,3,3,4,8,9,4,1,1,0,0,13,3,3,2,1,-1,-1,4,5,5,16,44,56,22,10,9,8,15,40,374,385,385,382,381,363,332,331,329,284,278,251,261,289,253,268,290,335,357,331,300,261,265,299,322,353,394,353,307,265,230,176,180,175,133,125,166,228,243,229,191,189,205,183,175,161,154,120,102,107,96,69,70,97,46,31,23,45,71,68,57,41,52,16,5,3,1,1,0,1,0,0,2,3,2,2,3,1,0,3,2,1,4,3,0,1,2,2,1,0,0,0,0,0,0,0,0,-1,6,13,15,9,6,4,4,9,22,382,407,412,411,403,394,381,378,358,327,273,271,275,297,300,258,302,344,379,364,320,276,276,281,308,345,367,348,322,296,278,267,261,242,181,208,167,181,237,275,239,256,222,195,172,139,143,132,140,152,144,109,93,121,85,88,38,59,81,103,120,95,56,13,4,4,4,4,3,1,2,2,3,3,2,3,1,1,2,3,1,0,0,0,1,2,2,2,2,1,2,1,2,2,2,0,0,0,0,0,0,5,17,5,3,4,5,406,411,436,437,430,434,425,402,357,332,327,275,291,343,323,273,303,357,409,390,355,305,274,294,335,373,406,381,336,343,341,334,284,235,257,267,216,220,206,269,276,239,224,177,133,149,150,120,118,146,177,181,156,160,124,70,87,71,101,129,106,101,81,53,37,19,4,4,3,2,2,3,3,3,2,2,1,1,1,2,1,2,0,2,2,2,2,2,2,2,2,2,2,2,2,0,0,0,0,0,0,0,4,4,5,4,3,433,427,434,462,465,464,467,451,424,375,324,317,334,364,322,280,323,383,431,420,382,343,318,314,328,383,430,394,416,405,401,368,309,318,311,285,294,271,226,274,290,225,158,133,93,75,74,85,116,155,144,171,176,192,158,151,162,146,156,145,108,71,45,39,51,61,32,5,3,3,5,4,2,3,1,3,3,3,3,2,1,2,2,1,2,1,1,1,2,3,2,2,2,2,2,0,0,0,0,0,0,0,0,0,3,5,-1,465,455,455,484,506,486,492,469,450,421,364,373,370,394,333,329,338,364,427,474,407,385,363,380,335,363,419,467,477,477,440,379,383,384,361,341,305,287,244,308,298,240,176,169,159,128,84,66,108,78,115,148,174,206,202,198,214,190,153,112,99,62,45,39,26,38,36,22,6,3,3,4,3,3,3,3,3,3,3,2,2,4,3,4,3,2,2,1,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,476,483,488,489,517,521,501,472,442,427,425,431,443,419,361,382,360,382,443,506,472,405,430,425,360,377,441,499,537,495,435,429,437,427,400,367,326,326,296,328,292,238,264,249,213,148,91,65,82,98,98,148,198,218,221,232,221,183,137,99,77,79,56,49,26,15,14,9,5,5,4,4,4,2,2,2,3,3,3,2,1,3,4,5,10,3,1,1,2,4,2,2,3,2,1,0,0,0,0,0,0,0,0,0,0,0,0,480,498,492,525,528,531,508,498,490,461,440,478,478,468,429,447,417,404,462,515,498,469,503,452,400,396,450,499,543,539,483,499,478,448,402,390,394,363,335,349,326,326,314,251,214,192,153,117,53,99,131,172,166,138,158,167,161,164,147,121,84,51,56,66,38,16,11,8,8,5,4,8,12,4,3,2,2,2,1,1,1,3,3,4,12,2,1,1,3,3,3,3,3,2,2,0,0,0,0,0,0,0,0,0,0,0,0,470,501,516,520,527,536,542,540,526,510,472,489,526,511,473,472,447,460,463,530,583,543,553,504,452,427,446,515,563,579,557,540,479,462,467,459,441,402,381,331,274,240,262,241,265,209,150,89,49,100,91,113,148,114,91,118,75,103,88,77,52,32,48,57,58,29,19,11,8,8,7,7,9,12,4,2,2,2,2,2,2,3,3,3,5,1,1,1,1,3,3,2,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,513,516,515,537,541,545,576,587,585,556,502,528,557,553,512,508,513,521,539,552,608,627,614,559,521,468,510,536,566,620,608,557,537,523,534,503,458,411,371,305,266,246,208,215,242,207,144,133,72,43,55,88,117,97,48,71,48,63,63,56,29,35,27,59,38,45,27,10,9,10,11,41,52,48,33,8,5,2,2,1,2,2,1,2,1,1,1,3,1,2,2,2,2,2,2,2,0,0,1,0,0,0,0,0,0,0,0,520,529,531,533,535,556,585,612,615,589,554,579,610,584,550,550,556,561,599,608,631,680,660,626,557,512,562,605,625,653,633,602,620,591,558,504,460,417,400,360,316,242,220,195,169,194,199,152,115,72,42,64,89,49,30,26,25,22,24,22,19,20,18,24,36,15,11,12,13,14,14,27,27,30,48,46,48,25,19,7,2,1,2,2,1,2,3,2,2,2,2,2,2,2,3,2,0,0,0,0,0,0,0,0,0,0,0,541,541,548,537,547,549,560,599,636,635,601,617,635,607,583,584,620,629,654,682,701,719,696,667,615,562,597,650,711,728,701,688,699,645,595,546,501,451,393,350,303,264,228,217,181,161,177,216,178,136,95,46,34,51,83,94,64,94,67,71,82,56,26,18,15,19,14,19,17,19,17,23,20,15,23,40,18,11,10,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,0,565,571,562,562,577,583,595,609,646,673,644,657,665,637,633,608,648,696,732,717,760,752,721,685,672,644,634,665,721,777,721,672,630,608,584,522,471,414,368,350,323,294,252,209,184,131,175,191,217,172,124,117,66,93,115,153,139,130,103,119,121,83,59,83,43,46,65,55,30,24,19,14,11,8,11,13,4,2,2,1,2,1,1,2,2,2,3,3,2,3,2,2,2,2,1,1,2,0,0,0,0,0,0,0,0,0,0,626,630,623,608,610,631,626,637,673,700,699,697,723,694,699,681,686,708,753,762,757,713,686,656,678,701,713,716,726,745,724,662,593,526,523,495,438,424,377,314,283,251,260,226,171,136,142,185,199,212,177,159,135,121,129,171,195,188,155,171,130,126,121,120,59,85,68,43,40,37,24,19,12,8,4,3,3,2,2,1,2,2,2,2,2,1,2,3,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,628,639,628,624,632,656,659,655,702,741,754,729,753,756,719,701,665,687,720,737,740,718,663,633,682,679,658,698,658,648,632,631,602,531,469,420,399,337,353,330,291,255,200,228,199,138,110,152,166,199,233,238,201,198,175,194,220,236,229,205,176,171,178,153,111,91,92,60,63,57,51,28,20,15,7,3,3,3,2,1,2,1,1,3,2,2,1,1,2,1,2,2,2,2,2,2,1,1,3,-1,0,0,0,0,0,0,0,621,621,624,626,636,662,686,682,711,740,758,758,775,744,701,687,656,655,661,692,718,670,639,599,636,602,630,676,618,570,564,538,532,518,481,436,392,351,305,256,251,238,205,160,169,155,129,101,146,169,182,221,226,241,271,263,230,251,281,265,217,239,192,169,152,142,93,106,75,58,39,47,31,21,13,10,3,5,5,4,3,2,1,2,2,2,2,1,1,1,-1,2,1,1,1,2,1,1,2,4,4,0,0,0,0,0,0,628,633,637,644,691,712,726,714,718,732,765,781,785,755,707,655,648,620,620,628,650,650,611,567,572,596,637,672,624,563,502,481,467,455,440,408,409,380,343,306,278,249,233,207,178,139,145,109,116,159,168,167,162,192,227,262,237,225,245,292,294,291,273,244,177,171,150,128,104,77,81,51,31,21,12,7,10,16,19,22,27,27,24,12,4,3,2,2,1,2,2,2,3,2,2,3,2,2,3,3,3,2,2,0,0,0,0,649,664,669,707,726,754,751,739,725,737,755,749,745,746,724,682,651,605,573,586,578,586,569,520,559,597,633,619,600,565,499,455,418,415,389,372,358,373,327,275,238,222,191,185,167,163,160,130,81,101,133,112,170,187,252,250,199,175,226,236,236,259,301,288,266,226,179,158,117,105,65,45,35,21,15,31,44,41,38,42,61,54,59,36,26,41,15,4,2,2,2,2,3,3,2,3,3,3,3,3,3,3,2,2,0,-1,-1,679,708,729,744,751,741,715,689,676,688,716,719,681,667,682,652,621,621,582,526,511,490,490,482,513,534,567,543,509,504,466,418,414,406,370,333,313,311,320,308,297,254,250,243,203,194,176,137,101,66,91,103,132,173,186,238,228,192,178,194,188,236,219,220,251,261,226,182,139,107,82,76,53,31,21,30,61,63,72,63,78,98,90,60,59,67,44,25,4,2,2,2,2,3,3,3,3,3,3,3,3,5,2,4,4,5,3,702,728,740,725,703,697,691,663,624,649,682,657,643,611,637,600,574,557,536,552,535,479,431,467,479,487,514,480,440,417,432,397,373,374,356,348,339,312,253,264,261,279,254,246,199,183,152,137,122,106,76,88,106,138,179,235,237,169,123,130,177,199,173,146,173,201,200,191,173,132,115,88,52,57,33,31,67,90,93,110,124,138,137,97,107,82,58,32,12,5,3,2,2,2,3,3,3,4,4,4,4,22,17,21,10,4,5,693,704,700,683,662,657,660,629,617,598,630,612,615,570,596,589,533,512,500,509,515,494,448,385,409,443,469,423,372,361,403,368,335,348,341,313,313,310,257,186,219,231,265,260,219,173,152,116,112,104,80,64,94,121,150,172,223,206,149,91,141,123,128,93,125,151,148,146,157,160,127,124,112,81,51,47,71,111,103,88,90,101,113,125,129,85,58,31,9,5,3,1,1,3,2,8,6,5,16,12,11,30,39,38,22,14,8,665,681,688,651,625,615,610,585,561,577,549,587,550,531,559,556,520,463,457,447,473,458,418,382,340,397,433,384,365,318,344,347,302,316,318,295,286,272,229,187,149,202,236,220,229,202,152,147,95,78,89,51,95,118,160,191,203,212,171,134,71,62,71,65,89,101,107,96,112,169,146,131,122,106,85,87,102,121,119,109,74,66,91,127,92,59,36,23,9,6,2,3,2,2,3,12,17,12,20,35,44,44,51,53,41,39,22,643,663,661,636,596,584,580,565,532,504,506,505,543,497,529,532,484,445,408,404,417,438,423,368,318,355,381,347,315,248,278,283,276,207,232,259,272,233,223,178,132,178,189,166,197,204,203,175,156,126,97,52,66,92,94,143,183,191,202,166,133,113,78,52,52,58,59,63,106,129,118,107,106,151,142,121,97,81,82,73,56,74,85,101,81,45,23,12,5,11,3,3,2,3,3,7,14,29,37,59,92,83,100,80,74,69,60,639,643,646,620,585,546,542,525,522,511,462,432,486,470,492,511,475,443,394,377,385,391,375,326,271,326,348,343,303,267,219,174,208,183,170,214,213,210,155,128,101,142,125,138,191,164,172,179,143,101,78,64,45,66,88,98,130,152,184,199,175,141,118,88,56,46,46,62,90,87,74,74,116,154,122,85,60,51,48,52,46,46,65,88,93,64,41,41,21,5,3,3,3,3,17,18,10,38,58,80,124,136,124,108,98,94,94,644,628,621,608,565,521,490,484,480,470,439,403,426,465,443,471,449,425,403,360,349,355,339,290,245,295,323,333,316,266,243,199,139,140,127,159,152,151,171,137,102,95,97,115,148,141,154,157,162,125,89,63,44,47,67,76,84,97,122,142,188,168,142,127,96,65,40,39,48,49,71,117,139,133,107,98,64,41,31,30,34,61,82,102,112,111,85,54,28,8,8,11,10,3,16,37,43,49,63,81,115,145,146,136,120,111,123,622,614,595,573,540,524,497,482,469,438,414,391,359,410,386,423,424,412,371,362,339,310,316,277,226,249,275,306,311,274,240,212,210,170,133,97,90,94,109,109,91,70,87,108,98,90,114,137,149,143,118,95,60,36,41,48,54,68,107,140,152,142,160,158,116,79,66,35,38,45,55,73,87,122,99,67,44,27,22,37,44,61,60,66,94,99,75,51,34,21,26,34,33,7,14,31,35,40,64,77,105,137,153,156,138,128,145,634,615,576,540,519,503,510,493,464,438,421,395,375,339,366,371,379,373,358,334,313,298,255,223,217,177,194,236,293,301,283,257,227,180,151,111,150,117,87,92,121,93,73,48,66,75,86,121,145,139,115,93,71,67,31,37,60,78,72,110,97,85,104,103,88,55,33,33,64,68,92,95,104,99,69,40,26,18,36,54,53,57,53,85,97,113,80,48,42,45,54,61,30,13,14,18,30,49,79,105,122,147,173,178,162,146,153,602,609,603,583,544,501,460,448,417,398,390,382,339,301,324,313,339,337,345,316,294,279,291,284,257,203,151,182,234,266,284,260,201,183,168,185,179,129,89,139,183,155,127,71,45,62,67,86,106,132,124,127,110,89,72,31,35,41,63,109,80,59,89,98,48,34,24,44,73,106,138,135,114,74,46,32,20,13,28,38,56,80,84,79,80,88,68,48,74,97,89,56,34,25,31,44,66,59,103,106,115,142,148,156,171,146,127,564,598,610,587,549,537,481,438,411,365,349,345,349,327,275,306,284,291,298,300,277,234,267,278,270,229,185,117,171,229,274,284,258,220,199,231,193,159,120,180,226,166,103,84,69,41,53,55,69,111,74,82,102,92,60,45,24,54,90,100,73,46,60,79,57,28,34,48,83,99,126,120,92,67,37,25,14,10,13,22,45,51,55,55,38,43,40,55,73,71,101,93,55,49,62,90,112,107,102,74,88,91,94,117,136,125,108,544,550,563,585,567,521,482,436,407,384,364,322,296,304,255,298,255,225,229,252,249,205,225,242,236,202,165,102,137,187,251,275,279,252,246,261,240,176,175,193,206,176,135,69,86,74,36,45,44,53,58,47,64,61,58,36,22,31,45,51,55,35,44,51,38,21,38,61,106,112,136,105,77,53,43,25,11,7,8,9,15,18,21,22,21,24,32,38,32,56,79,102,85,97,115,99,80,59,48,44,62,71,63,89,103,116,87,483,499,497,551,543,501,466,436,444,410,374,349,307,259,246,250,265,198,184,200,204,184,180,194,204,193,160,112,94,160,191,237,282,301,301,294,260,252,242,233,188,138,142,97,72,72,58,61,34,31,43,37,37,38,31,23,20,24,26,27,28,29,25,23,18,28,55,53,58,96,97,95,82,57,23,15,8,4,4,4,6,7,6,9,14,18,23,22,39,71,87,104,115,120,91,72,47,34,21,28,34,34,49,71,77,77,63,421,420,461,484,490,482,455,461,448,420,374,335,316,257,233,189,222,202,148,167,160,147,119,131,168,171,168,128,79,131,171,195,247,294,295,312,318,287,275,232,209,154,106,95,137,125,95,111,76,64,36,28,28,27,23,21,19,17,18,19,21,22,24,39,15,19,24,47,64,79,51,73,78,55,38,16,6,4,3,3,4,4,4,6,9,15,14,19,35,59,83,77,107,122,96,68,48,27,19,22,46,59,68,62,61,56,38,393,392,410,434,451,454,458,451,417,418,371,365,325,289,230,210,176,154,121,100,106,102,102,104,119,134,143,129,67,126,161,208,230,213,262,269,301,294,265,238,198,201,149,140,173,166,147,151,116,100,97,66,49,46,45,54,71,45,17,15,13,18,18,15,13,16,19,26,39,53,28,44,63,50,37,13,5,3,2,2,3,3,3,4,8,9,19,39,53,53,49,84,97,86,87,83,54,27,16,22,36,34,25,28,40,33,26,400,362,378,388,404,448,426,429,397,420,391,362,339,294,264,210,174,153,149,162,140,105,101,74,76,93,101,124,70,100,141,186,172,170,189,255,296,316,287,274,247,185,223,187,195,176,169,166,158,136,120,99,97,90,71,66,88,70,66,52,16,12,11,16,11,10,12,13,17,19,18,26,44,26,9,4,3,3,32,53,39,41,42,14,10,8,18,21,23,26,39,53,47,76,59,51,39,26,7,8,8,14,17,19,23,21,22,382,345,388,431,454,458,427,387,354,394,365,322,341,287,232,210,242,223,204,229,199,171,126,100,92,74,58,61,74,78,99,138,109,185,218,259,257,286,299,281,249,262,242,247,227,188,172,150,117,142,135,132,122,119,102,97,106,104,96,81,51,15,10,10,9,8,10,14,7,11,10,10,15,8,5,3,5,25,54,37,48,64,61,39,23,7,6,10,17,31,32,25,35,56,46,24,19,14,4,4,4,4,10,21,28,51,41,324,355,390,390,401,450,426,387,346,339,366,341,275,258,258,275,274,285,270,248,206,184,141,146,147,91,82,126,94,55,70,72,100,132,171,172,193,258,292,306,288,288,268,256,232,192,168,152,108,83,105,97,82,100,106,109,106,95,90,81,70,70,36,9,6,6,6,10,11,3,6,6,9,4,3,3,6,29,24,14,28,49,62,55,21,5,4,19,35,27,17,13,14,17,20,10,18,10,3,2,3,4,12,42,61,61,52,368,407,432,436,463,454,431,410,379,341,327,308,318,321,329,334,313,304,292,249,228,212,186,184,158,138,112,144,131,92,66,67,106,84,96,150,194,242,295,290,269,273,263,253,245,210,188,142,128,81,59,51,46,44,53,76,60,78,48,75,55,51,64,47,8,5,5,6,3,8,4,3,3,2,4,2,2,14,6,8,35,49,69,62,26,4,4,5,11,22,33,37,18,5,3,3,3,3,3,2,18,25,30,41,49,36,23,378,413,455,481,490,477,451,423,417,387,354,331,319,308,328,325,332,319,297,262,265,235,231,192,184,175,154,152,139,126,115,67,70,120,161,195,229,246,267,285,279,267,257,222,237,219,194,180,143,134,111,107,85,53,40,29,36,40,35,39,31,49,53,29,33,4,4,4,4,3,4,3,3,4,3,1,1,2,5,20,39,61,64,29,6,3,7,24,31,44,56,67,41,19,5,2,3,3,0,1,3,10,27,41,58,50,28,361,406,419,424,427,426,413,378,400,388,358,340,332,297,256,284,295,304,295,295,302,285,248,218,234,213,184,164,155,106,77,51,83,115,154,147,178,171,229,211,245,216,239,218,195,238,214,192,175,162,135,107,107,93,78,60,42,30,21,19,18,14,14,12,12,8,4,4,3,3,3,3,3,3,3,3,3,0,4,6,29,50,45,25,3,4,30,60,70,83,77,55,45,28,21,4,2,1,0,0,3,5,27,45,54,42,15,345,374,390,381,362,371,366,360,364,395,378,359,343,310,288,240,235,255,261,278,281,286,276,260,241,217,168,152,106,92,100,47,70,91,99,118,138,155,173,163,205,172,167,145,167,220,236,219,201,172,159,146,137,122,95,87,74,64,45,23,26,19,13,10,7,5,6,10,5,3,2,2,4,3,3,3,4,0,0,6,22,37,21,2,2,4,22,37,74,64,46,35,57,54,30,6,2,0,0,3,4,5,11,17,21,20,8,378,392,381,355,309,322,294,310,357,395,390,367,339,318,284,249,224,196,193,230,227,257,260,256,249,229,205,159,163,154,97,59,45,48,56,103,88,123,102,141,160,148,97,85,139,190,207,227,218,205,184,174,160,136,103,98,72,50,33,38,55,52,32,22,24,36,29,47,50,22,3,3,2,3,2,2,3,0,0,13,12,16,7,0,3,12,49,60,31,29,22,26,44,53,23,5,2,0,2,3,2,5,0,0,1,3,-1,363,370,359,343,298,265,305,355,360,384,374,369,351,320,289,269,239,200,158,170,186,197,221,226,236,226,214,193,194,154,125,90,101,57,43,56,62,66,86,97,123,109,83,80,113,131,181,190,219,240,233,203,189,166,143,141,110,71,56,68,88,69,48,47,68,66,72,67,63,46,27,13,3,2,3,2,2,3,0,1,14,4,2,3,3,14,34,21,10,9,26,48,47,55,44,21,0,0,0,0,0,0,0,0,0,0,0,323,340,335,303,278,236,253,296,331,353,361,352,321,301,266,247,231,216,193,165,111,134,145,173,193,199,202,201,201,185,164,123,129,105,70,55,40,42,52,75,80,56,67,113,157,179,203,232,234,245,249,239,211,186,174,126,77,84,110,86,112,98,79,87,99,104,95,83,67,52,27,12,5,3,3,2,3,2,2,0,4,0,0,3,4,5,15,3,5,22,50,68,76,72,42,11,0,2,2,0,0,0,0,0,0,0,0,290,310,303,269,260,230,281,298,314,331,337,362,341,322,288,280,255,225,194,168,162,109,80,116,137,154,137,172,180,191,171,162,149,129,110,84,74,51,37,39,50,74,78,102,138,165,188,205,224,236,251,253,227,186,155,145,129,147,163,156,145,131,119,136,136,110,98,93,79,73,48,30,18,14,6,3,2,2,2,1,1,4,0,3,3,2,1,2,6,11,28,43,33,38,39,20,0,2,3,0,0,0,0,0,0,0,0,280,242,238,228,200,209,275,306,320,329,340,351,341,328,306,291,276,231,225,213,191,160,117,75,80,99,83,112,134,161,159,157,145,121,124,113,95,80,50,35,73,85,82,82,101,126,154,194,221,230,236,216,221,202,197,176,165,163,149,145,142,97,106,99,130,114,78,66,89,91,77,57,39,44,30,13,3,2,1,0,1,0,3,3,3,3,5,5,1,3,15,19,14,25,40,30,12,3,0,3,0,0,0,0,0,0,0,226,182,175,183,222,259,305,292,291,306,325,329,308,316,303,288,272,249,234,201,179,160,134,91,67,61,42,67,87,108,116,137,131,89,95,101,73,65,43,31,46,68,91,127,155,166,190,194,222,229,224,216,179,164,162,156,140,115,112,101,110,106,62,70,89,73,53,68,99,105,97,79,81,56,26,7,3,2,2,2,1,0,0,1,7,35,17,0,0,0,0,5,6,15,29,41,34,26,1,2,0,0,0,0,0,0,0,147,135,196,228,257,274,256,286,304,302,284,282,256,258,277,288,278,255,236,223,197,154,125,135,128,84,90,56,36,73,103,120,115,96,65,75,68,47,32,35,37,47,83,118,136,146,141,171,200,217,214,194,177,149,116,119,125,114,85,57,76,94,69,44,54,40,53,90,108,91,93,108,96,64,43,45,31,10,2,2,1,0,0,0,5,14,0,0,0,0,0,7,29,31,45,50,34,22,2,1,0,-1,0,0,0,0,0,93,126,184,203,205,238,269,282,276,282,259,220,209,236,277,297,283,265,240,228,206,206,195,162,142,122,75,56,42,43,82,89,87,86,67,34,30,31,43,72,96,70,63,68,72,113,136,170,188,208,202,182,162,144,130,85,81,92,81,56,46,69,66,47,31,36,62,89,79,57,75,92,103,72,47,30,16,11,2,1,2,0,0,0,0,0,0,0,0,11,30,35,33,39,53,47,16,5,-1,0,5,-1,0,0,0,0,0,107,152,145,166,225,248,259,249,243,248,243,192,190,219,256,286,282,268,256,243,235,219,202,175,155,133,120,94,45,30,39,60,51,40,26,30,45,53,78,103,121,124,124,110,106,134,142,173,192,205,191,176,154,134,117,79,55,51,69,51,30,49,63,41,22,29,52,80,56,40,64,91,118,86,66,38,16,2,1,2,1,1,1,0,0,0,0,0,0,4,24,17,2,1,15,23,24,13,7,4,3,1,0,0,0,0,0,92,88,117,176,214,234,228,210,192,209,220,171,187,222,258,279,250,224,200,207,224,209,186,171,167,154,141,123,93,49,26,25,24,25,27,68,55,64,55,78,98,124,148,145,127,177,193,202,220,216,198,173,134,101,110,88,66,40,42,55,24,30,47,44,18,24,55,56,32,41,77,80,80,79,53,40,18,3,5,2,2,2,2,2,1,1,0,0,0,0,0,0,-1,-1,-1,0,5,21,28,10,4,5,-1,0,0,0,0,141,155,169,188,198,193,180,167,140,168,160,143,154,187,224,247,234,202,154,134,153,169,182,159,160,151,129,124,92,47,24,26,43,66,83,99,66,117,112,110,81,112,139,174,181,169,189,225,225,218,204,163,118,98,69,60,39,34,30,27,23,17,18,17,12,28,55,36,17,45,60,44,36,63,28,5,3,2,2,3,2,4,3,3,3,3,2,0,0,0,0,0,0,0,0,0,20,23,35,40,23,4,-2,0,0,0,0,102,120,159,167,171,147,156,121,93,137,115,99,156,194,230,221,215,191,157,103,85,122,138,149,124,92,93,93,54,22,24,46,79,72,90,114,111,116,157,158,128,133,138,155,188,224,211,234,222,212,198,170,149,118,93,63,44,37,31,25,24,23,15,13,10,9,18,11,7,17,31,13,26,32,6,2,2,2,2,2,25,32,7,4,2,2,3,2,0,0,0,0,0,0,0,0,-2,-1,9,26,32,31,7,-2,0,0,0,55,77,90,106,136,100,115,87,69,74,89,136,169,220,242,219,176,140,122,100,60,74,83,91,115,90,50,36,20,34,32,73,77,81,80,98,135,144,137,187,171,145,191,190,208,224,227,231,212,204,179,182,141,117,97,94,79,40,38,40,66,59,51,32,14,11,6,5,4,3,3,3,3,3,2,1,2,2,7,14,43,62,62,39,6,3,2,2,0,0,0,0,0,0,0,0,0,0,0,13,37,33,6,-2,0,0,0,30,27,46,60,87,77,49,56,94,116,141,173,203,218,221,210,187,136,121,108,88,65,33,41,69,53,19,16,33,74,93,70,119,101,105,146,131,165,190,195,208,195,193,199,213,223,200,193,199,180,182,198,177,180,143,111,72,56,82,64,89,96,73,39,38,36,20,36,10,5,5,3,2,2,2,2,9,11,10,29,30,63,82,57,37,37,30,6,2,0,0,0,0,0,0,0,0,0,0,0,0,11,-1,0,0,0,0,-1,-1,0,1,54,37,35,64,59,79,104,136,150,144,156,169,188,211,172,162,135,99,63,45,21,14,18,52,87,103,119,118,146,152,177,145,173,158,198,210,228,218,198,159,196,205,201,177,148,171,200,232,225,180,155,126,59,94,102,113,111,121,99,53,74,48,68,66,28,30,52,26,13,22,3,3,22,54,58,61,77,81,91,88,78,63,59,46,24,4,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-2,0,0,-1,12,42,83,101,88,91,96,126,161,191,175,132,98,92,75,23,16,24,50,57,106,157,152,180,162,194,203,187,196,212,217,235,225,202,184,142,140,158,145,123,160,194,225,269,236,188,133,105,75,130,138,136,138,140,102,98,94,87,102,55,49,66,78,55,43,21,4,3,17,50,71,95,121,116,94,58,68,58,30,30,29,10,2,2,0,0,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-2,0,0,-1,12,42,83,101,88,91,96,126,161,166,141,101,71,47,24,15,13,37,63,104,136,147,171,195,191,204,222,230,222,234,262,230,219,213,184,141,110,101,122,163,170,188,208,263,269,217,158,135,80,128,183,172,165,146,131,132,144,148,105,92,118,116,93,61,37,15,6,5,14,27,35,62,99,115,99,67,30,37,21,7,5,3,3,3,3,2,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-2,0,0,-1,12,42,83,101,88,91,96,126,153,145,145,124,104,87,64,13,12,23,52,75,112,144,167,179,198,204,218,223,224,232,230,212,167,152,144,94,91,134,172,184,220,247,249,270,260,226,197,177,108,103,151,208,199,179,165,184,184,148,140,150,128,112,79,49,51,49,24,6,8,29,54,59,98,117,101,80,42,19,7,4,4,4,3,3,3,3,3,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-2,0,0,-1,12,42,83,101,88,91,96,138,149,149,149,129,90,60,36,24,11,11,34,57,88,120,141,144,153,175,193,182,198,210,207,193,171,154,107,70,101,127,171,209,242,267,301,278,255,229,209,176,185,131,194,234,227,211,196,191,178,181,180,152,123,99,104,101,85,52,13,6,24,53,79,96,117,127,110,85,53,28,13,4,4,4,3,3,5,25,38,19,4,3,2,0,0,0,0,0,0,0,0,0,0,0,0,-2,0,0,-1,12,42,83,101,88,91,118,139,139,139,139,126,104,67,52,43,21,10,26,50,59,72,104,87,118,151,151,134,173,173,197,173,150,133,88,62,77,90,118,161,186,243,262,292,284,272,222,236,211,175,193,238,209,201,202,204,209,214,189,169,152,119,116,68,50,43,10,10,61,79,111,131,143,124,97,67,75,49,22,12,7,5,5,3,5,30,11,6,4,3,2,2,2,2,2,1,0,0,0,0,0,0,0,-2,0,0,-1,12,42,83,101,88,110,128,128,128,128,128,139,117,117,90,52,20,8,8,9,21,56,60,56,99,111,92,111,130,138,152,155,111,73,54,59,114,150,162,165,184,198,252,282,310,280,264,234,200,208,239,216,179,164,183,213,204,214,186,142,112,112,75,72,35,13,13,12,27,59,65,93,96,130,123,97,73,48,52,26,30,20,9,7,12,28,9,4,3,3,3,3,3,3,3,3,2,0,0,0,0,0,0,-2,0,0,-1,12,42,83,101,88,89,89,89,89,89,89,117,151,125,106,74,36,16,19,7,7,8,13,48,65,55,48,71,106,135,118,117,99,63,38,93,147,187,202,212,210,238,258,293,295,268,269,258,258,250,242,209,175,139,150,149,177,176,150,143,107,67,71,28,25,60,61,50,22,25,45,55,72,75,106,122,107,97,59,47,68,28,18,25,28,21,7,4,5,5,3,3,3,3,3,3,3,2,0,0,0,0,0,-2,0,0,-1,12,42,83,82,64,64,64,64,64,64,64,100,145,135,113,85,52,76,63,29,7,6,7,13,34,19,57,97,114,111,83,82,66,46,33,70,113,156,198,219,241,248,282,305,310,274,258,259,264,257,234,224,188,151,119,121,136,143,131,113,102,63,36,42,86,97,109,99,71,55,34,31,38,58,73,99,114,127,97,71,99,58,46,60,66,51,21,12,16,5,4,5,5,5,5,5,5,5,2,0,0,0,0,-2,0,0,-1,12,42,56,30,30,30,30,30,30,30,30,75,109,142,113,92,106,104,77,49,53,30,5,5,7,32,64,56,62,56,60,30,23,27,44,44,59,93,142,174,188,238,274,295,288,247,217,204,202,211,182,190,200,188,159,128,92,121,137,97,70,41,77,89,126,140,150,138,120,86,68,55,53,44,49,77,103,128,144,112,123,95,89,83,79,45,32,37,38,18,8,6,6,6,6,6,6,6,6,0,0,0,0,-2,0,0,-1,12,22,1,1,1,1,1,1,1,1,1,30,84,139,142,136,136,127,110,93,70,51,33,7,4,16,34,16,17,15,15,19,24,53,93,105,135,128,148,133,197,247,284,289,269,244,204,162,128,127,146,128,137,173,165,125,91,100,119,103,72,52,87,114,118,141,168,176,152,140,96,119,111,90,76,58,76,98,142,156,149,127,127,102,57,61,58,35,25,19,16,31,31,31,31,31,31,31,31,0,0,0,0,-2,0,0,-1,6,0,0,0,0,0,0,0,0,0,0,1,50,106,147,128,111,106,108,96,81,58,38,17,4,4,5,8,16,24,22,51,66,53,57,106,167,174,198,192,178,239,277,271,248,218,183,164,155,130,92,92,120,152,160,129,107,70,82,70,53,72,97,111,130,160,195,199,192,177,157,159,158,138,133,96,71,85,108,126,149,171,149,119,87,102,71,49,35,40,37,51,51,51,51,51,51,51,51]};
+const BASE_DEM = DEM; // built-in ~100 m grid; replaced when high-resolution data is loaded
+const FT = 3.28084;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- geography ---------- */
+const [CLAT, CLON] = DEM.center;            // Mill Valley City Hall
+const RK = DEM.radiusKm;                      // 3 miles
+const KY = 111.0, KX = 111.32*Math.cos(CLAT*Math.PI/180);
+const EXAG = 1.6;
+function zAt(u,v){ // bilinear, meters
+  const x = Math.min(Math.max(u,0),1)*(DEM.w-1), y = Math.min(Math.max(v,0),1)*(DEM.h-1);
+  const x0=Math.floor(x), y0=Math.floor(y), x1=Math.min(x0+1,DEM.w-1), y1=Math.min(y0+1,DEM.h-1), fx=x-x0, fy=y-y0, Z=DEM.z, W=DEM.w;
+  const a=Z[y0*W+x0], b=Z[y0*W+x1], c=Z[y1*W+x0], d=Z[y1*W+x1];
+  return (a*(1-fx)+b*fx)*(1-fy)+(c*(1-fx)+d*fx)*fy;
+}
+function zSmooth(u,v){ // catmull-rom bicubic, meters
+  const x = Math.min(Math.max(u,0),1)*(DEM.w-1), y = Math.min(Math.max(v,0),1)*(DEM.h-1);
+  const xi=Math.floor(x), yi=Math.floor(y), fx=x-xi, fy=y-yi;
+  const g=(i,j)=>DEM.z[Math.min(Math.max(j,0),DEM.h-1)*DEM.w+Math.min(Math.max(i,0),DEM.w-1)];
+  const cr=(p0,p1,p2,p3,t)=>p1+0.5*t*(p2-p0+t*(2*p0-5*p1+4*p2-p3+t*(3*(p1-p2)+p3-p0)));
+  const r=[]; for(let j=-1;j<3;j++) r.push(cr(g(xi-1,yi+j),g(xi,yi+j),g(xi+1,yi+j),g(xi+2,yi+j),fx));
+  return cr(r[0],r[1],r[2],r[3],fy);
+}
+const ll2uv = (lat,lon) => [(lon-DEM.west)/(DEM.east-DEM.west),(DEM.north-lat)/(DEM.north-DEM.south)];
+const uv2ll = (u,v) => [DEM.north-v*(DEM.north-DEM.south), DEM.west+u*(DEM.east-DEM.west)];
+const ll2xz = (lat,lon) => [(lon-CLON)*KX, (CLAT-lat)*KY];
+const xz2ll = (x,z) => [CLAT - z/KY, CLON + x/KX];
+const inCircle = (lat,lon) => { if(lat==null||lon==null) return false; const [x,z]=ll2xz(lat,lon); return Math.hypot(x,z) <= RK; };
+const groundY = (lat,lon) => { const [u,v]=ll2uv(lat,lon); return Math.max(zSmooth(u,v),0)/1000*EXAG; };
+const ll2world = (lat,lon,h=0) => { const [x,z]=ll2xz(lat,lon); return new THREE.Vector3(x, groundY(lat,lon)+h, z); };
+const elevFt = (lat,lon) => inCircle(lat,lon) ? Math.max(0,Math.round(zSmooth(...ll2uv(lat,lon))*FT)) : null;
+
+const PLACES = [
+  {n:"East Peak", s:"2,571 ft", lat:37.9293, lon:-122.5778},
+  {n:"West Peak", s:"2,560 ft", lat:37.9239, lon:-122.5966},
+  {n:"City Hall", s:"Mill Valley", lat:37.907426, lon:-122.547754, h:0.05},
+  {n:"Muir Woods", lat:37.8916, lon:-122.5717},
+  {n:"Homestead Valley", lat:37.8885, lon:-122.5480, h:0.05},
+  {n:"Tam Valley", lat:37.8796, lon:-122.5400, h:0.05},
+  {n:"Richardson Bay", lat:37.8900, lon:-122.5080, water:true},
+];
+
+/* ---------- categories ---------- */
+const CAT_COLORS = {coin:"#F2C14E",bottle:"#56C6D6",button:"#F08A4B",jewelry:"#E66FAA",tool:"#9EA6FF",toy:"#B9E05A",hardware:"#C9A48A",relic:"#FF6B5E",other:"#F4F4F0"};
+const DEFAULT_CATS = ["Coin","Bottle","Button","Jewelry","Tool","Hardware","Toy","Relic","Other"];
+const EXTRA = ["#7FE0B0","#FFB3D1","#FFD98A","#8FD3FF","#D3A6FF"];
+function catColor(c){ const k=String(c||"other").trim().toLowerCase(); if(CAT_COLORS[k]) return CAT_COLORS[k]; let h=0; for(const ch of k) h=(h*31+ch.charCodeAt(0))>>>0; return EXTRA[h%EXTRA.length]; }
+function catLabel(c){ c=String(c||"Other").trim(); return c ? c[0].toUpperCase()+c.slice(1) : "Other"; }
+function ageYear(s){ if(!s) return null; const m=String(s).match(/(\d{4})(s)?/); if(!m) return null; return +m[1]+(m[2]?5:0); }
+function fmtDate(d){ if(!d) return "—"; const t=new Date(d+"T12:00:00"); return isNaN(t)?esc(d):t.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}); }
+const fmtNum = n => n==null ? "—" : n.toLocaleString();
+
+/* ---------- state ---------- */
+let finds = [];            // {id, ...data}
+let hidden = new Set();    // hidden category keys
+let selected = null;
+let editing = null;        // id being edited
+let db = null, assets = null;
+let layers = [], basemap = null, preview = null; // map layers
+
+/* ---------- three.js scene ---------- */
+const mapEl = $("map");
+const IS_SMALL = matchMedia("(pointer: coarse)").matches || innerWidth<900; // phones/tablets get lighter meshes and textures
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+mapEl.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38,1,0.05,200);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI*0.47; controls.minDistance = 1.2; controls.maxDistance = 26;
+controls.screenSpacePanning = false;
+const HOME = {pos:new THREE.Vector3(5.6,6.4,9.6), tgt:new THREE.Vector3(0,0,0.3)};
+camera.position.copy(HOME.pos); controls.target.copy(HOME.tgt);
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x445544,0.55));
+const sun = new THREE.DirectionalLight(0xffffff,0.75); sun.position.set(-6,8,-4); scene.add(sun);
+
+// terrain mesh: a polar disc centered on City Hall
+let NR=130, NS=400, pos, uvs;
+const geo = new THREE.BufferGeometry();
+const meshHooks = {before:[], after:[]}; // lets other parts (satellite tiles) follow mesh rebuilds
+function buildMesh(nr, ns){
+  meshHooks.before.forEach(f=>f());
+  NR=nr; NS=ns;
+  geo.dispose(); geo.deleteAttribute("normal"); // free the old GPU buffers; normals must be rebuilt at the new size
+  const vcount=1+NR*NS; pos=new Float32Array(vcount*3); uvs=new Float32Array(vcount*2);
+  const idx=new Uint32Array(NS*3 + (NR-1)*NS*6); let n=0;
+  const putVertex=(k,x,z)=>{ const [lat,lon]=xz2ll(x,z), [u,v]=ll2uv(lat,lon);
+    pos[k*3]=x; pos[k*3+1]=Math.max(zSmooth(u,v),0)/1000*EXAG; pos[k*3+2]=z; uvs[k*2]=u; uvs[k*2+1]=1-v; };
+  putVertex(0,0,0);
+  for(let r=1;r<=NR;r++) for(let a=0;a<NS;a++){ const t=a/NS*Math.PI*2, rr=RK*r/NR; putVertex(1+(r-1)*NS+a, Math.cos(t)*rr, Math.sin(t)*rr); }
+  for(let a=0;a<NS;a++){ const b=(a+1)%NS; idx[n++]=0; idx[n++]=1+b; idx[n++]=1+a; }
+  for(let r=1;r<NR;r++) for(let a=0;a<NS;a++){ const b=(a+1)%NS, i0=1+(r-1)*NS, i1=1+r*NS;
+    idx[n++]=i0+a; idx[n++]=i0+b; idx[n++]=i1+a; idx[n++]=i0+b; idx[n++]=i1+b; idx[n++]=i1+a; }
+  geo.setAttribute("position",new THREE.BufferAttribute(pos,3));
+  geo.setAttribute("uv",new THREE.BufferAttribute(uvs,2));
+  geo.setIndex(new THREE.BufferAttribute(idx,1)); geo.computeVertexNormals(); geo.computeBoundingSphere(); geo.computeBoundingBox();
+  meshHooks.after.forEach(f=>f());
+}
+buildMesh(130,400);
+
+// cut-earth wall around the edge, banded like a soil profile
+const BASE=-0.38;
+const skirtMat = new THREE.MeshLambertMaterial({vertexColors:true, side:THREE.DoubleSide});
+const wallGeo = new THREE.BufferGeometry();
+function buildWall(){
+  const ring=1+(NR-1)*NS, P=[], C=[], I=[];
+  const top=new THREE.Color(cssVar("--soil-top")), mid=new THREE.Color(cssVar("--soil-mid")), low=new THREE.Color(cssVar("--soil-low"));
+  const LV=[0,0.015,0.05,0.12,0.22,1]; // fractions of depth below surface
+  for(let a=0;a<=NS;a++){ const k=ring+(a%NS), x=pos[k*3], y=pos[k*3+1], z=pos[k*3+2];
+    LV.forEach((f,li)=>{ const yy=y+(BASE-y)*f; P.push(x,yy,z);
+      const c = f<0.03 ? top : f<0.15 ? top.clone().lerp(mid,(f-0.03)/0.12) : mid.clone().lerp(low,Math.min((f-0.15)/0.5,1));
+      C.push(c.r,c.g,c.b); }); }
+  const L=LV.length;
+  for(let a=0;a<NS;a++) for(let l=0;l<L-1;l++){ const p=a*L+l, q=(a+1)*L+l; I.push(p,p+1,q, q,p+1,q+1); }
+  wallGeo.dispose(); wallGeo.deleteAttribute("normal");
+  wallGeo.setAttribute("position",new THREE.Float32BufferAttribute(P,3));
+  wallGeo.setAttribute("color",new THREE.Float32BufferAttribute(C,3));
+  wallGeo.setIndex(I); wallGeo.computeVertexNormals();
+}
+scene.add(new THREE.Mesh(wallGeo,skirtMat));
+const floorGeo=new THREE.CircleGeometry(RK,NS); floorGeo.rotateX(Math.PI/2); floorGeo.translate(0,BASE,0);
+const floorMat=new THREE.MeshLambertMaterial({color:0x2a231c}); scene.add(new THREE.Mesh(floorGeo,floorMat));
+// faint shadow disc on the ground plane
+const shadow=new THREE.Mesh(new THREE.CircleGeometry(RK*1.12,96).rotateX(-Math.PI/2).translate(0,BASE-0.01,0),
+  new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.12,depthWrite:false}));
+scene.add(shadow);
+
+const terrainCanvas = document.createElement("canvas"), lineCanvas = document.createElement("canvas");
+const texture = new THREE.CanvasTexture(terrainCanvas), lineTexture = new THREE.CanvasTexture(lineCanvas);
+texture.anisotropy = lineTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+const clayMat = new THREE.MeshLambertMaterial({color:0xd3c8ba}); // plain modeling-clay surface under every layer
+const terrain = new THREE.Mesh(geo, clayMat);
+scene.add(terrain);
+
+function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function parseColor(c){ const cv=document.createElement("canvas").getContext("2d"); cv.fillStyle=c; const s=cv.fillStyle; if(s[0]==="#") return [parseInt(s.slice(1,3),16),parseInt(s.slice(3,5),16),parseInt(s.slice(5,7),16),1];
+  const m=s.match(/[\d.]+/g).map(Number); return [m[0],m[1],m[2],m[3]??1]; }
+function paintTerrain(){
+  const hi=DEM.w>600, TW=hi?(DEM.w>2500 && !IS_SMALL ? 3072 : 2048):1600, TH=Math.round(TW*(DEM.north-DEM.south)/(DEM.east-DEM.west)*KY/KX);
+  terrainCanvas.width=lineCanvas.width=TW; terrainCanvas.height=lineCanvas.height=TH;
+  const ctx=terrainCanvas.getContext("2d"), img=ctx.createImageData(TW,TH), d=img.data;
+  const lctx=lineCanvas.getContext("2d"), limg=lctx.createImageData(TW,TH), LD=limg.data, lc=parseColor(cssVar("--t-line"));
+  const low=parseColor(cssVar("--t-low")), mid=parseColor(cssVar("--t-mid")), high=parseColor(cssVar("--t-high")), water=parseColor(cssVar("--t-water"));
+  const con=parseColor(cssVar("--t-contour")), ind=parseColor(cssVar("--t-index"));
+  const STEP=100/FT; // 100 ft in meters
+  const zs=new Float32Array(TW*TH);
+  const sample = hi ? zAt : zSmooth;
+  for(let y=0;y<TH;y++) for(let x=0;x<TW;x++) zs[y*TW+x]=sample(x/(TW-1),y/(TH-1));
+  // hillshade (sun from the northwest, 45° up) so ridges and gullies read at full data resolution
+  const pxm=(DEM.east-DEM.west)*KX*1000/(TW-1), pym=(DEM.north-DEM.south)*KY*1000/(TH-1);
+  const LX=-0.5, LY=0.5, LZ=0.7071, VEX=2;
+  for(let y=0;y<TH;y++) for(let x=0;x<TW;x++){
+    const k=y*TW+x, z=zs[k], o=k*4;
+    let r,g,b;
+    if(z<=1.5){ [r,g,b]=water; }
+    else { const t=Math.min(z/785,1); const A=t<0.5?low:mid, B=t<0.5?mid:high, f=t<0.5?t/0.5:(t-0.5)/0.5;
+      r=A[0]+(B[0]-A[0])*f; g=A[1]+(B[1]-A[1])*f; b=A[2]+(B[2]-A[2])*f;
+      const zl=zs[k-(x>0?1:0)], zR=zs[k+(x<TW-1?1:0)], zu=zs[k-(y>0?TW:0)], zD=zs[k+(y<TH-1?TW:0)];
+      const dzdx=(zR-zl)/(2*pxm)*VEX, dzdy=(zu-zD)/(2*pym)*VEX; // y measured northward
+      const shade=Math.max(0,(-dzdx*LX - dzdy*LY + LZ)/Math.sqrt(dzdx*dzdx+dzdy*dzdy+1));
+      const m=0.62+0.55*shade; r*=m; g*=m; b*=m;
+      // contour: does a 100ft level pass between this px and right/down neighbor?
+      const zr=zs[k+(x<TW-1?1:0)], zd=zs[k+(y<TH-1?TW:0)];
+      const lv=Math.floor(z/STEP), cross=Math.floor(zr/STEP)!==lv||Math.floor(zd/STEP)!==lv;
+      if(cross && z>STEP*0.5){ const top=Math.max(lv,Math.floor(zr/STEP),Math.floor(zd/STEP));
+        LD[o]=lc[0]; LD[o+1]=lc[1]; LD[o+2]=lc[2]; LD[o+3]=(top%5===0)?235:140; }
+    }
+    d[o]=r; d[o+1]=g; d[o+2]=b; d[o+3]=255;
+  }
+  ctx.putImageData(img,0,0); lctx.putImageData(limg,0,0);
+  texture.needsUpdate=true; lineTexture.needsUpdate=true;
+  clayMat.color.set(cssVar("--clay"));
+  buildWall();
+}
+
+// place labels
+const labelsEl=$("labels");
+const placeEls = PLACES.map(p=>{ const el=document.createElement("div"); el.className="place"+(p.water?" water":"");
+  el.innerHTML=esc(p.n)+(p.s?`<small>${esc(p.s)}</small>`:""); labelsEl.appendChild(el);
+  return {el, p, w:ll2world(p.lat,p.lon,(p.h||0.04))}; });
+function placeLabels(){ placeEls.forEach(o=>{ o.w=ll2world(o.p.lat,o.p.lon,(o.p.h||0.04)); }); }
+
+// markers
+const markerGroup = new THREE.Group(); scene.add(markerGroup);
+const headGeo = new THREE.SphereGeometry(0.055,20,14);
+const stemMat = new THREE.LineBasicMaterial({color:0x1a2320, transparent:true, opacity:0.75});
+const ringGeo = new THREE.RingGeometry(0.09,0.12,40); ringGeo.rotateX(-Math.PI/2);
+let markers = []; // {id, head, line, base}
+const selRing = new THREE.Mesh(ringGeo,new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,transparent:true,opacity:0.95,depthTest:false}));
+selRing.visible=false; selRing.renderOrder=1000; scene.add(selRing); // above every map layer
+
+function buildMarkers(){
+  markers.forEach(m=>{ markerGroup.remove(m.head); markerGroup.remove(m.line); m.head.material.dispose(); m.line.geometry.dispose(); });
+  markers=[];
+  for(const f of visibleFinds()){
+    if(!inCircle(f.lat,f.lon)) continue;
+    const base=ll2world(f.lat,f.lon,0.003), top=base.clone(); top.y+=0.26;
+    const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([base,top]),stemMat);
+    const head=new THREE.Mesh(headGeo,new THREE.MeshBasicMaterial({color:catColor(f.category)}));
+    head.position.copy(top); head.userData.id=f.id;
+    markerGroup.add(line); markerGroup.add(head);
+    markers.push({id:f.id, head, line, base});
+  }
+  syncSelection3D();
+}
+function syncSelection3D(){
+  const m=markers.find(m=>m.id===selected);
+  markers.forEach(x=>x.head.scale.setScalar(x.id===selected?1.7:1));
+  if(m){ selRing.visible=true; selRing.position.copy(m.base); selRing.material.color.set(cssVar("--ink")); } else selRing.visible=false;
+}
+
+// sizing
+function resize(){ const r=mapEl.getBoundingClientRect(); renderer.setSize(r.width,r.height,false); camera.aspect=r.width/Math.max(r.height,1); camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(mapEl); resize();
+
+// camera tween
+let tween=null;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function flyTo(tgt,pos,ms=900){
+  if(reduceMotion){ controls.target.copy(tgt); camera.position.copy(pos); return; }
+  tween={t0:performance.now(),ms,fromT:controls.target.clone(),fromP:camera.position.clone(),tgt,pos};
+}
+function flyToFind(f){
+  if(!inCircle(f.lat,f.lon)) return;
+  const t=ll2world(f.lat,f.lon,0.1);
+  const dir=camera.position.clone().sub(controls.target).setY(0).normalize();
+  const pos=t.clone().add(dir.multiplyScalar(2.6)); pos.y=t.y+1.7;
+  flyTo(t,pos);
+}
+$("resetView").onclick=()=>flyTo(HOME.tgt.clone(),HOME.pos.clone());
+$("topView").onclick=()=>flyTo(new THREE.Vector3(0,0.1,0),new THREE.Vector3(0,15.5,0.01));
+
+// loop
+const tmp=new THREE.Vector3();
+function project(w){ tmp.copy(w).project(camera); const r=renderer.domElement; return [ (tmp.x+1)/2*r.clientWidth, (1-tmp.y)/2*r.clientHeight, tmp.z ]; }
+function frame(now){
+  if(tween){ const k=Math.min((now-tween.t0)/tween.ms,1), e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
+    controls.target.lerpVectors(tween.fromT,tween.tgt,e); camera.position.lerpVectors(tween.fromP,tween.pos,e); if(k>=1) tween=null; }
+  controls.update();
+  renderer.render(scene,camera);
+  for(const p of placeEls){ const [x,y,z]=project(p.w); p.el.style.transform=`translate(${x}px,${y}px) translate(-50%,-100%)`; p.el.style.display=z<1?"":"none"; p.el.style.left="0"; p.el.style.top="0"; }
+  updateStreets();
+  if(hoverId){ const m=markers.find(m=>m.id===hoverId); if(m){ const [x,y]=project(m.head.position); tipEl.style.left=x+"px"; tipEl.style.top=y+"px"; } }
+  requestAnimationFrame(frame);
+}
+
+// interaction
+const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
+const tipEl=$("tip"); let hoverId=null, picking=false, downAt=null;
+function castFrom(ev){ const r=renderer.domElement.getBoundingClientRect(); ndc.set(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1); ray.setFromCamera(ndc,camera); }
+renderer.domElement.addEventListener("pointermove",ev=>{
+  if(ev.pointerType!=="mouse"||picking) return;
+  castFrom(ev); const hit=ray.intersectObjects(markers.map(m=>m.head))[0];
+  const id=hit?.object.userData.id||null;
+  if(id!==hoverId){ hoverId=id; const f=finds.find(f=>f.id===id);
+    if(f){ tipEl.innerHTML=`<b>${esc(f.name||"Untitled find")}</b><span>${esc(catLabel(f.category))}${f.age?" · "+esc(f.age):""}</span>`; tipEl.hidden=false; }
+    else tipEl.hidden=true;
+    renderer.domElement.style.cursor=id?"pointer":"";
+  }
+});
+renderer.domElement.addEventListener("pointerleave",()=>{hoverId=null;tipEl.hidden=true;});
+renderer.domElement.addEventListener("pointerdown",ev=>{downAt=[ev.clientX,ev.clientY];});
+renderer.domElement.addEventListener("pointerup",ev=>{
+  if(!downAt||Math.hypot(ev.clientX-downAt[0],ev.clientY-downAt[1])>5) return; downAt=null;
+  castFrom(ev);
+  if(picking){ const hit=ray.intersectObject(terrain)[0]; if(!hit) return;
+    const [lat,lon]=xz2ll(hit.point.x,hit.point.z);
+    $("fLat").value=lat.toFixed(5); $("fLon").value=lon.toFixed(5); updateLocHint("Picked on map"); stopPick(); return; }
+  const hit=ray.intersectObjects(markers.map(m=>m.head))[0];
+  if(hit) select(hit.object.userData.id,{fly:false}); else if(selected) select(null);
+});
+function startPick(){ picking=true; mapEl.classList.add("picking"); $("pickBanner").hidden=false; $("detail").hidden=true; if(innerWidth<=860) mapEl.scrollIntoView({behavior:"smooth",block:"start"}); }
+function stopPick(){ picking=false; mapEl.classList.remove("picking"); $("pickBanner").hidden=true; if(innerWidth<=860) $("formView").scrollIntoView({behavior:"smooth",block:"start"}); }
+$("pickBtn").onclick=startPick; $("pickCancel").onclick=stopPick;
+
+/* ---------- list / stats / chips ---------- */
+function visibleFinds(){ return finds.filter(f=>!hidden.has(catLabel(f.category).toLowerCase())); }
+function sorted(arr){
+  const s=$("sort").value, a=[...arr];
+  if(s==="found") a.sort((x,y)=>String(y.foundOn||"").localeCompare(String(x.foundOn||"")));
+  if(s==="age") a.sort((x,y)=>(ageYear(x.age)??9999)-(ageYear(y.age)??9999));
+  if(s==="name") a.sort((x,y)=>String(x.name||"").localeCompare(String(y.name||"")));
+  if(s==="elev") a.sort((x,y)=>(elevFt(y.lat,y.lon)??-1)-(elevFt(x.lat,x.lon)??-1));
+  return a;
+}
+function thumbHTML(f,cls="thumb"){ const src=f.thumb||(f.photoUrl&&!String(f.photoUrl).startsWith("photo:")?f.photoUrl:""); return src ? `<img class="${cls}" src="${esc(src)}" alt="" loading="lazy">` : `<span class="${cls}"><i style="background:${catColor(f.category)}"></i></span>`; }
+function render(){
+  // stats
+  $("sCount").textContent=finds.length;
+  const years=finds.map(f=>ageYear(f.age)).filter(y=>y!=null);
+  $("sOldest").textContent=years.length?Math.min(...years):"—";
+  const elevs=finds.map(f=>elevFt(f.lat,f.lon)).filter(e=>e!=null);
+  $("sHigh").textContent=elevs.length?fmtNum(Math.max(...elevs)):"—";
+  // chips
+  const counts={}; finds.forEach(f=>{const c=catLabel(f.category); counts[c]=(counts[c]||0)+1;});
+  $("chips").innerHTML=Object.keys(counts).sort().map(c=>`<button class="chip" type="button" data-cat="${esc(c.toLowerCase())}" aria-pressed="${!hidden.has(c.toLowerCase())}"><i style="background:${catColor(c)}"></i>${esc(c)} <em>${counts[c]}</em></button>`).join("");
+  $("catList").innerHTML=[...new Set([...DEFAULT_CATS,...Object.keys(counts)])].map(c=>`<option value="${esc(c)}">`).join("");
+  // list
+  const vis=sorted(visibleFinds());
+  $("list").innerHTML=vis.map(f=>{
+    const e=elevFt(f.lat,f.lon);
+    return `<li class="item${f.id===selected?" sel":""}" data-id="${esc(f.id)}" tabindex="0">${thumbHTML(f)}
+      <div class="item-t"><b>${esc(f.name||"Untitled find")}${f.example?'<span class="tag">Example</span>':""}</b><span>${esc(catLabel(f.category))}${f.age?" · "+esc(f.age):""}</span></div>
+      <div class="item-m">${f.foundOn?esc(f.foundOn):"—"}<br>${e==null?"outside circle":fmtNum(e)+" ft"}</div></li>`;}).join("");
+  if(!finds.length && db) $("list").innerHTML=`<li class="empty"><b>No finds logged yet</b>Tap “Log a find”, add a photo, and pick the spot on the map.</li>`;
+  buildMarkers(); renderTimeline(); renderDetail();
+}
+$("chips").onclick=e=>{ const b=e.target.closest(".chip"); if(!b) return; const k=b.dataset.cat; hidden.has(k)?hidden.delete(k):hidden.add(k); render(); };
+$("sort").onchange=render;
+$("list").onclick=e=>{ const li=e.target.closest(".item"); if(li) select(li.dataset.id); };
+$("list").onkeydown=e=>{ if(e.key==="Enter"){ const li=e.target.closest(".item"); if(li) select(li.dataset.id);} };
+
+/* ---------- timeline ---------- */
+function renderTimeline(){
+  const svg=$("tl"), W=svg.clientWidth||600, H=58, pad=14;
+  const pts=visibleFinds().map(f=>({f,y:ageYear(f.age)})).filter(p=>p.y!=null);
+  const MY=mapYears();
+  const minY=Math.min(1850,...pts.map(p=>p.y),...MY), maxY=2030, x=y=>pad+(y-minY)/(maxY-minY)*(W-2*pad);
+  $("tlRange").textContent=pts.length?`${pts.length} dated · ${Math.min(...pts.map(p=>p.y))}–${Math.max(...pts.map(p=>p.y))}`:"Add an estimated age to place a find here";
+  let out=`<line x1="${pad}" x2="${W-pad}" y1="40" y2="40" stroke="var(--line)"/>`;
+  const step=(maxY-minY)>150?25:10;
+  for(let y=Math.ceil(minY/step)*step;y<=maxY;y+=step){ const X=x(y); out+=`<line x1="${X}" x2="${X}" y1="37" y2="43" stroke="var(--muted)"/><text x="${X}" y="55" text-anchor="middle">${y}</text>`; }
+  for(const LY of MY){ const X=x(LY), end=X>W-70; out+=`<line x1="${X}" x2="${X}" y1="4" y2="43" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="3 3"/><text x="${end?X-5:X+5}" y="10" text-anchor="${end?"end":"start"}" style="fill:var(--accent);font-weight:500">Map · ${LY}</text>`; }
+  const stacks={}; pts.sort((a,b)=>a.y-b.y).forEach(p=>{ const X=x(p.y), b=Math.round(X/11); stacks[b]=(stacks[b]||0)+1; const cy=33-(stacks[b]-1)*11;
+    out+=`<circle class="tl-dot${p.f.id===selected?" sel":""}" data-id="${esc(p.f.id)}" cx="${X}" cy="${cy}" r="5" fill="${catColor(p.f.category)}"><title>${esc(p.f.name)} · ${esc(p.f.age)}</title></circle>`; });
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.innerHTML=out;
+}
+$("tl").onclick=e=>{ const c=e.target.closest(".tl-dot"); if(c) select(c.dataset.id); };
+new ResizeObserver(()=>renderTimeline()).observe($("tl"));
+
+/* ---------- selection / detail ---------- */
+let confirmDel=false;
+function select(id,{fly=true}={}){
+  selected=id; confirmDel=false;
+  const f=finds.find(f=>f.id===id);
+  if(f&&fly) flyToFind(f);
+  document.querySelectorAll(".item").forEach(li=>li.classList.toggle("sel",li.dataset.id===id));
+  syncSelection3D(); renderTimeline(); renderDetail();
+}
+function renderDetail(){
+  const el=$("detail"), f=finds.find(f=>f.id===selected);
+  if(!f){ el.hidden=true; return; }
+  const e=elevFt(f.lat,f.lon), hasLoc=f.lat!=null&&f.lon!=null;
+  el.innerHTML=`<button class="closex" type="button" id="dClose" aria-label="Close">×</button>
+    ${f.photoUrl?`<img class="ph" ${String(f.photoUrl).startsWith("photo:")?`src="${esc(f.thumb||"")}" data-photo="${esc(f.photoUrl.slice(6))}"`:`src="${esc(f.photoUrl)}"`} alt="${esc(f.name)}">`:`<div class="noph"><div><i style="background:${catColor(f.category)}"></i>No photo</div></div>`}
+    <div class="body">
+      <div><span class="chip" style="cursor:default"><i style="background:${catColor(f.category)}"></i>${esc(catLabel(f.category))}</span>${f.example?'<span class="tag">Example</span>':""}</div>
+      <h2>${esc(f.name||"Untitled find")}</h2>
+      <dl class="kv">
+        <dt>Est. age</dt><dd>${esc(f.age||"—")}</dd>
+        <dt>Found</dt><dd>${fmtDate(f.foundOn)}</dd>
+        <dt>Location</dt><dd class="mono">${hasLoc?`${(+f.lat).toFixed(5)}, ${(+f.lon).toFixed(5)}`:"—"}</dd>
+        <dt>Elevation</dt><dd class="mono">${e==null?(hasLoc?"Outside the 3-mile circle":"—"):fmtNum(e)+" ft"}</dd>
+        ${f.notes?`<dt>Notes</dt><dd style="white-space:pre-wrap">${esc(f.notes)}</dd>`:""}
+      </dl>
+      ${confirmDel?`<div class="confirm">Delete “${esc(f.name||"this find")}” and its photo? This can’t be undone.<div class="row"><button class="btn danger" id="dYes" type="button">Delete</button><button class="btn ghost" id="dNo" type="button">Keep</button></div></div>`
+        :canEdit(f)?`<div class="row"><button class="btn" id="dEdit" type="button">Edit</button><button class="btn ghost danger" id="dDel" type="button">Delete</button></div>`:""}
+    </div>`;
+  el.hidden=false; fillPhotos(el);
+  $("dClose").onclick=()=>select(null);
+  if($("dEdit")) $("dEdit").onclick=()=>openForm(f);
+  if($("dDel")) $("dDel").onclick=()=>{confirmDel=true;renderDetail();};
+  if($("dNo")) $("dNo").onclick=()=>{confirmDel=false;renderDetail();};
+  if($("dYes")) $("dYes").onclick=async()=>{ try{ await db.doc("finds/"+f.id).delete(); if(f.photoId&&assets) assets.delete(f.photoId).catch(()=>{}); select(null);}catch(err){ alertErr("Couldn’t delete: "+(err?.message||err)); } };
+}
+function alertErr(msg){ $("status").textContent=msg; }
+
+/* ---------- form ---------- */
+let pendingPhoto=null; // {blob, url}
+function openForm(f=null){
+  editing=f?.id||null; pendingPhoto=null;
+  $("formTitle").textContent=f?"Edit find":"Log a find";
+  $("saveBtn").textContent=f?"Save changes":"Save find";
+  $("fCat").value=f?catLabel(f.category):""; $("fName").value=f?.name||""; $("fAge").value=f?.age||"";
+  $("fDate").value=f?.foundOn||new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+  $("fLat").value=f?.lat??""; $("fLon").value=f?.lon??""; $("fNotes").value=f?.notes||"";
+  $("fPhoto").value=""; $("formErr").hidden=true; $("photoHint").textContent=""; $("photoHint").className="hint";
+  setDropImg(f?.thumb||(f?.photoUrl&&!String(f.photoUrl).startsWith("photo:")?f.photoUrl:null));
+  if(f?.photoUrl && String(f.photoUrl).startsWith("photo:")) photoData(f.photoUrl.slice(6)).then(v=>{ if(v && editing===f.id && !pendingPhoto) setDropImg(v); });
+  $("photoHint").textContent = assets ? "" : "Photos can’t be saved until the database is set up.";
+  $("fPhoto").disabled=!assets;
+  updateLocHint();
+  $("listView").hidden=true; $("formView").hidden=false; $("detail").hidden=true;
+  $("fCat").focus({preventScroll:true});
+  if(innerWidth<=860) $("formView").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function closeForm(){ stopPick(); $("formView").hidden=true; $("listView").hidden=false; editing=null; renderDetail(); }
+$("formCancel").onclick=closeForm; $("formCancel2").onclick=closeForm;
+function setDropImg(url){ const img=$("dropImg"); if(url){ img.src=url; img.hidden=false; $("dropText").hidden=true; } else { img.hidden=true; $("dropText").hidden=false; } }
+function updateLocHint(src){
+  const lat=parseFloat($("fLat").value), lon=parseFloat($("fLon").value);
+  if(isNaN(lat)||isNaN(lon)){ $("locHint").textContent=""; return; }
+  const e=elevFt(lat,lon);
+  $("locHint").textContent=(src?src+" · ":"")+(e==null?"outside the 3-mile circle":`${fmtNum(e)} ft elevation`);
+}
+$("fLat").oninput=()=>updateLocHint(); $("fLon").oninput=()=>updateLocHint();
+
+const drop=$("drop");
+["dragenter","dragover"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",e=>{ const file=e.dataTransfer.files[0]; if(file&&assets) handlePhoto(file); });
+$("fPhoto").onchange=e=>{ const file=e.target.files[0]; if(file) handlePhoto(file); };
+
+async function handlePhoto(file){
+  const hint=$("photoHint"); hint.className="hint"; hint.textContent="Reading photo…";
+  try{
+    const buf=await file.arrayBuffer();
+    const exif=readExif(buf);
+    const bmp=await createImageBitmap(file,{imageOrientation:"from-image"});
+    const max=1800, s=Math.min(1,max/Math.max(bmp.width,bmp.height));
+    const c=document.createElement("canvas"); c.width=Math.round(bmp.width*s); c.height=Math.round(bmp.height*s);
+    c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+    const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",0.86));
+    pendingPhoto={blob,url:URL.createObjectURL(blob)}; setDropImg(pendingPhoto.url);
+    const got=[];
+    if(exif.lat!=null && !$("fLat").value){ $("fLat").value=exif.lat.toFixed(5); $("fLon").value=exif.lon.toFixed(5); got.push("location"); updateLocHint("From photo"); }
+    if(exif.date && !editing){ $("fDate").value=exif.date; got.push("date"); }
+    hint.textContent=got.length?`Filled in ${got.join(" and ")} from the photo.`:"Photo ready. It had no location data, so pick the spot on the map.";
+    if(got.length) hint.className="hint ok";
+  }catch(err){ hint.textContent="That file couldn’t be read as an image. Try a JPEG or PNG."; pendingPhoto=null; }
+}
+
+// Minimal JPEG EXIF reader: GPS + DateTimeOriginal
+function readExif(buf){
+  const v=new DataView(buf), out={};
+  try{
+    if(v.getUint16(0)!==0xFFD8) return out;
+    let o=2;
+    while(o<v.byteLength-4){
+      const mk=v.getUint16(o), len=v.getUint16(o+2);
+      if(mk===0xFFE1 && v.getUint32(o+4)===0x45786966){
+        const t=o+10, le=v.getUint16(t)===0x4949;
+        const u16=p=>v.getUint16(t+p,le), u32=p=>v.getUint32(t+p,le);
+        const rat=p=>u32(p)/(u32(p+4)||1);
+        const ifd=(p,cb)=>{ const n=u16(p); for(let i=0;i<n;i++){ const e=p+2+i*12; cb(u16(e),u16(e+2),u32(e+4),e+8); } };
+        let gps=null, sub=null;
+        ifd(u32(4),(tag,type,cnt,vo)=>{ if(tag===0x8825) gps=u32(vo); if(tag===0x8769) sub=u32(vo); });
+        if(sub) ifd(sub,(tag,type,cnt,vo)=>{ if(tag===0x9003){ let s=""; const p=u32(vo); for(let i=0;i<19;i++) s+=String.fromCharCode(v.getUint8(t+p+i)); const m=s.match(/^(\d{4}):(\d{2}):(\d{2})/); if(m) out.date=`${m[1]}-${m[2]}-${m[3]}`; } });
+        if(gps){ const g={}; ifd(gps,(tag,type,cnt,vo)=>{
+            if(tag===1||tag===3) g[tag]=String.fromCharCode(v.getUint8(vo+t-t+t>0?vo+t:0));
+            if(tag===2||tag===4){ const p=u32(vo); g[tag]=rat(p)+rat(p+8)/60+rat(p+16)/3600; } });
+          // refs live inline in the value field
+          ifd(gps,(tag,type,cnt,vo)=>{ if(tag===1||tag===3) g[tag]=String.fromCharCode(v.getUint8(t+vo)); });
+          if(g[2]!=null&&g[4]!=null){ out.lat=g[2]*(g[1]==="S"?-1:1); out.lon=g[4]*(g[3]==="W"?-1:1); } }
+        break;
+      }
+      o+=2+len;
+    }
+  }catch(e){}
+  return out;
+}
+
+$("form").onsubmit=async e=>{
+  e.preventDefault();
+  const err=$("formErr"); err.hidden=true;
+  const name=$("fName").value.trim(), cat=$("fCat").value.trim();
+  const latS=$("fLat").value.trim(), lonS=$("fLon").value.trim();
+  const lat=latS?parseFloat(latS):null, lon=lonS?parseFloat(lonS):null;
+  if(!name){ err.textContent="Give the item a name, even a working one like “Unknown token”."; err.hidden=false; $("fName").focus(); return; }
+  if((latS||lonS)&&(isNaN(lat)||isNaN(lon)||Math.abs(lat)>90||Math.abs(lon)>180)){ err.textContent="Latitude and longitude need to be decimal degrees, e.g. 37.9060 and −122.5449."; err.hidden=false; return; }
+  const btn=$("saveBtn"); btn.disabled=true; btn.textContent="Saving…";
+  try{
+    const prev=editing?finds.find(f=>f.id===editing):null;
+    const data={ name, category:catLabel(cat||"Other"), age:$("fAge").value.trim(), foundOn:$("fDate").value||"",
+      lat, lon, notes:$("fNotes").value.trim(), updatedAt:new Date().toISOString(),
+      photoId:prev?.photoId||"", photoUrl:prev?.photoUrl||"", thumb:prev?.thumb||"", example:false, createdBy:prev?.createdBy||uid() };
+    if(pendingPhoto&&assets){ const up=await assets.upload(pendingPhoto.blob,{type:"image/jpeg"}); data.photoId=up.id; data.photoUrl=up.url; data.thumb=up.thumb||"";
+      if(prev?.photoId) assets.delete(prev.photoId).catch(()=>{}); }
+    let id=editing;
+    if(editing) await db.doc("finds/"+editing).set({...data, createdAt:prev?.createdAt||data.updatedAt});
+    else { const ref=await db.collection("finds").add({...data, createdAt:data.updatedAt}); id=ref.id; }
+    closeForm(); selected=id; setTimeout(()=>{ const f=finds.find(f=>f.id===id); if(f) select(id); },300);
+  }catch(ex){
+    err.textContent = ex?.code==="too_large" ? "That photo is too large to upload. Try a smaller one." :
+      ex?.code==="permission-denied" ? "Saving was refused. Unlock with the passcode again, or ask the owner." :
+      "Couldn’t save the find: "+(ex?.message||ex)+". Your entries are still here; try again.";
+    err.hidden=false;
+  }finally{ btn.disabled=false; btn.textContent=editing?"Save changes":"Save find"; }
+};
+
+/* ---------- map layers: satellite + historical maps ---------- */
+const SAT_BBOX = {west:-122.603, south:37.863, east:-122.492, north:37.951};
+const OLD_BBOX = {west:-122.61, south:37.875, east:-122.50, north:37.945}; // first-version satellite imports
+const EXT = {west:DEM.west, south:DEM.south, east:DEM.east, north:DEM.north}; // fitted maps cover the whole block
+// Standard USGS quadrangle sheets around Mill Valley (corner values printed on the map collar)
+const QUADS = [
+  {id:"tam15", label:"USGS 15′ Tamalpais / Mt. Tamalpais", north:38, south:37.75, west:-122.75, east:-122.5, scale:62500, match:/tamalpais/i},
+  {id:"sr", label:"USGS 7.5′ San Rafael", north:38, south:37.875, west:-122.625, east:-122.5, scale:24000, match:/san.?rafael/i},
+  {id:"pb", label:"USGS 7.5′ Point Bonita", north:37.875, south:37.75, west:-122.625, east:-122.5, scale:24000, match:/bonita/i},
+];
+const CORNER_NAMES = ["top-left","top-right","bottom-right","bottom-left"];
+
+/* layer stack: every layer has its own switch and opacity; they blend over a plain clay surface */
+const texCache = new Map();
+const MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
+const LAYER_DEFAULTS = {elev:{on:true,op:1}, satellite:{on:true,op:1}, relief:{on:false,op:0.85}, contours:{on:true,op:0.6}, streets:{on:true,op:1}};
+let layerState = null;
+try{ layerState = JSON.parse(localStorage.getItem("mvf-layers")||"null"); }catch(e){}
+if(!layerState){ // carry over the earlier single-layer choice
+  layerState = {};
+  try{
+    const old=localStorage.getItem("mvf-layer"), ob=JSON.parse(localStorage.getItem("mvf-blend")||"{}")||{};
+    if(old==="contours") layerState.satellite={on:false};
+    else if(old) layerState[old]={on:true, ...(ob[old]!=null?{op:ob[old]}:{})};
+  }catch(e){}
+}
+function saveLocal(){ try{ localStorage.setItem("mvf-layers", JSON.stringify(layerState)); }catch(e){} }
+function stateOf(id, kind){
+  const d = LAYER_DEFAULTS[id] || (kind==="historical" ? {on:false,op:0.9} : {on:false,op:1}), s = layerState[id] || {};
+  return {on: s.on ?? d.on, op: s.op ?? d.op};
+}
+function setLayer(id, patch){ layerState[id] = {...(layerState[id]||{}), ...patch}; saveLocal(); }
+
+const ll2km = ([lon,lat]) => [(lon-CLON)*KX, (lat-CLAT)*KY];
+const shiftDeg = s => [(s?.e||0)/1000/KX, (s?.n||0)/1000/KY];
+function coversCircle(b){ return b.west<=CLON-RK/KX+1e-4 && b.east>=CLON+RK/KX-1e-4 && b.south<=CLAT-RK/KY+1e-4 && b.north>=CLAT+RK/KY-1e-4; }
+function satLayer(){
+  if(!basemap?.url) return null;
+  const bbox = basemap.bbox || OLD_BBOX;
+  return {id:"satellite", kind:"satellite", name:"Satellite", year:"", url:basemap.url, bbox, coverage:null, shift:{e:0,n:0}, credit:"Imagery: USGS, USDA NAIP", partial:!coversCircle(bbox)};
+}
+function historicalLayers(){ return [...layers].sort((a,b)=>(parseInt(a.year)||9999)-(parseInt(b.year)||9999)); }
+function reliefLayer(){ return setHasTiles(TILESETS.relief) ? {id:"relief", kind:"relief", name:"Lidar relief", credit:"Relief: USGS 3DEP"} : null; }
+// bottom to top
+function layerDefs(){
+  const L=[{id:"elev", kind:"elev", name:"Elevation colors", sub:"Tinted by height, with hillshade"}];
+  const s=satLayer(); L.push(s ? {...s, sub:"USGS / USDA aerial imagery"} : {id:"satellite", kind:"satellite", missing:true, name:"Satellite", sub:"Add an aerial image", add:"sat"});
+  const r=reliefLayer(); L.push(r ? {...r, sub:"Bare ground at 1 m, trees removed"} : {id:"relief", kind:"relief", missing:true, name:"Lidar relief", sub:"Add 1 m bare-earth relief", add:"relief"});
+  historicalLayers().forEach(h=>L.push({...h, sub:h.credit||"Historical map"}));
+  L.push({id:"contours", kind:"contours", name:"Contour lines", sub:"Every 100 ft, bold every 500 ft"});
+  L.push(streetData ? {id:"streets", kind:"streets", name:"Streets & trails", sub:"Roads, trails and old rail grades", credit:"Streets: © OpenStreetMap contributors"}
+                    : {id:"streets", kind:"streets", missing:true, name:"Streets & trails", sub:"Add OpenStreetMap data", add:"streets"});
+  return L;
+}
+
+// one draped mesh per image layer, all sharing the terrain geometry
+const overlayPool = new Map();
+function overlayFor(key, basic){
+  let o=overlayPool.get(key);
+  if(!o){
+    const opts={transparent:true, depthWrite:false, polygonOffset:true};
+    const mat = basic ? new THREE.MeshBasicMaterial(opts) : new THREE.MeshLambertMaterial(opts);
+    const mesh=new THREE.Mesh(geo, mat); mesh.visible=false; scene.add(mesh);
+    o={mesh, mat}; overlayPool.set(key,o);
+  }
+  return o;
+}
+function dropOverlay(key){ const o=overlayPool.get(key); if(!o) return; scene.remove(o.mesh); o.mat.dispose(); overlayPool.delete(key); }
+function setDepthOrder(mesh, mat, k, sub=0){ // later layers draw on top and win the depth tie
+  mesh.renderOrder = 10 + k*3 + sub;
+  mat.polygonOffsetFactor = -(1 + k); mat.polygonOffsetUnits = -(4 + 4*k + 2*sub);
+}
+
+// alpha mask in the image's own frame: white inside the map's coverage, black elsewhere (and on the border, so clamped edges vanish)
+function makeMask(bbox, coverage){
+  const c=document.createElement("canvas"), N=1024;
+  c.width=N; c.height=Math.max(64,Math.round(N*(bbox.north-bbox.south)*KY/((bbox.east-bbox.west)*KX)));
+  const g=c.getContext("2d"); g.fillStyle="#000"; g.fillRect(0,0,c.width,c.height); g.fillStyle="#fff";
+  if(coverage && coverage.length>=6){
+    g.beginPath();
+    for(let i=0;i<coverage.length;i+=2){
+      const x=(coverage[i]-bbox.west)/(bbox.east-bbox.west)*c.width, y=(bbox.north-coverage[i+1])/(bbox.north-bbox.south)*c.height;
+      i ? g.lineTo(x,y) : g.moveTo(x,y);
+    }
+    g.closePath(); g.fill();
+  } else g.fillRect(0,0,c.width,c.height);
+  g.fillStyle="#000"; g.fillRect(0,0,c.width,1); g.fillRect(0,c.height-1,c.width,1); g.fillRect(0,0,1,c.height); g.fillRect(c.width-1,0,1,c.height);
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping; return t;
+}
+function ensureTex(L){
+  const key = L.id+"|"+(L.canvas ? "preview" : L.url);
+  if(texCache.has(key)) return texCache.get(key);
+  const p = new Promise((res,rej)=>{
+    const done = img => {
+      const tex = img instanceof HTMLCanvasElement ? new THREE.CanvasTexture(img) : new THREE.Texture(img);
+      tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping; tex.anisotropy = MAX_ANISO; tex.needsUpdate = true;
+      res({tex, mask:makeMask(L.bbox, L.coverage)});
+    };
+    if(L.canvas) return done(L.canvas);
+    const img=new Image();
+    img.onload=()=>done(img);
+    img.onerror=()=>{ texCache.delete(key); rej(new Error("load")); };
+    img.src=L.url;
+  });
+  texCache.set(key,p); return p;
+}
+function placeTex(tex, L){ // map terrain uvs (DEM extent) onto the image's own, shifted bounds
+  const [dx,dy]=shiftDeg(L.shift), b=L.bbox, iw=b.east-b.west, ih=b.north-b.south;
+  tex.repeat.set((DEM.east-DEM.west)/iw, (DEM.north-DEM.south)/ih);
+  tex.offset.set((DEM.west-(b.west+dx))/iw, (DEM.south-(b.south+dy))/ih);
+}
+
+let applySeq = 0;
+function applyLayer(opts={}){
+  const seq=++applySeq, defs=layerDefs(), used=new Set();
+  const stack=defs.filter(d=>!d.missing && !(preview && d.id===preview.id));
+  if(preview){ const i=stack.findIndex(d=>d.kind==="contours"); stack.splice(i<0?stack.length:i, 0, {...preview, isPreview:true}); }
+  let k=0, satOn=false, onCount=0;
+  for(const d of stack){
+    const st = d.isPreview ? {on:true, op:preview.op} : stateOf(d.id, d.kind), on = st.on && st.op>0;
+    if(st.on && !d.isPreview) onCount++;
+    if(d.kind==="elev" || d.kind==="contours"){
+      const o=overlayFor(d.kind, d.kind==="contours"); used.add(d.kind);
+      if(!o.mat.map){ o.mat.map = d.kind==="elev" ? texture : lineTexture; o.mat.needsUpdate=true; }
+      o.mat.opacity=st.op; o.mesh.visible=on; if(on) setDepthOrder(o.mesh,o.mat,k++);
+      continue;
+    }
+    if(d.kind==="relief"){ tileOrder.relief={on, op:st.op, k}; if(on) k++; continue; }
+    if(d.kind==="streets"){ streetsOrder={on, op:st.op, k}; if(on) k++; continue; }
+    // image layers: satellite base image, historical maps, a map being aligned
+    const key=d.isPreview ? "preview" : d.id; used.add(key);
+    const o=overlayFor(key);
+    if(d.kind==="satellite"){ tileOrder.satellite={on, op:st.op, k}; satOn = on && st.op>0.5; }
+    if(!on){ o.mesh.visible=false; continue; }
+    setDepthOrder(o.mesh,o.mat,k++); o.mat.opacity=st.op;
+    ensureTex(d).then(t=>{
+      if(seq!==applySeq) return;
+      if(o.mat.map!==t.tex || o.mat.alphaMap!==t.mask){ o.mat.map=t.tex; o.mat.alphaMap=t.mask; o.mat.needsUpdate=true; }
+      placeTex(t.tex,d); o.mesh.visible=true;
+      if(d.kind==="satellite") syncTiles();
+    }).catch(()=>{ o.mesh.visible=false; });
+  }
+  if(!stack.some(d=>d.kind==="relief")) tileOrder.relief={on:false};
+  if(!stack.some(d=>d.kind==="satellite")) tileOrder.satellite={on:false};
+  if(!stack.some(d=>d.kind==="streets")) streetsOrder={on:false};
+  overlayPool.forEach((o,key)=>{ if(!used.has(key)) dropOverlay(key); });
+
+  mapEl.classList.toggle("sat", satOn);
+  stemMat.color.set(satOn ? "#ffffff" : cssVar("--ink"));
+  $("elevLegend").hidden = !stateOf("elev","elev").on;
+  $("layerBtnLabel").textContent = onCount;
+  // corner badge: the topmost visible historical map, plus credits for what's showing
+  const vis = stack.filter(d=>d.isPreview || stateOf(d.id,d.kind).on);
+  const hist = [...vis].reverse().find(d=>d.kind==="historical");
+  const credits = vis.filter(d=>d.kind!=="historical" && d.credit).map(d=>d.credit+(d.partial?" (part of the circle)":""));
+  if(hist) credits.unshift(hist.credit||"Historical map");
+  $("lbYear").hidden=!hist; $("lbName").hidden=!hist;
+  if(hist){ $("lbYear").textContent=hist.year||"—"; $("lbName").textContent=hist.name||"Untitled map"; }
+  $("lbCredit").textContent=credits.join(" · ");
+  $("layerBadge").hidden = !hist && !credits.length;
+  syncTiles(); syncStreets();
+  if(opts.panel!==false) renderLayerPanel();
+  renderTimeline();
+}
+function mapYears(){
+  const ys=historicalLayers().filter(h=>stateOf(h.id,"historical").on && !(preview&&preview.id===h.id)).map(h=>parseInt(h.year)).filter(Boolean);
+  if(preview && parseInt(preview.year)) ys.push(parseInt(preview.year));
+  return [...new Set(ys)];
+}
+
+/* layer panel */
+let panelMode = "list", openRow = null, confirmLayerDel = null;
+const PANELS = {list:"lpList", sat:"lpSat", import:"lpImport", align:"lpAlign", elev:"lpElev", relief:"lpRelief", streets:"lpStreets"};
+function openPanel(mode="list"){
+  panelMode=mode; $("layerPanel").hidden=false; $("layerBtn").setAttribute("aria-expanded","true");
+  Object.entries(PANELS).forEach(([m,id])=>{ $(id).hidden = m!==mode; });
+  renderLayerPanel(); renderTileGrid();
+}
+function closePanel(){
+  if(preview) cancelAlign();
+  $("layerPanel").hidden=true; $("layerBtn").setAttribute("aria-expanded","false");
+}
+$("layerBtn").onclick=()=> $("layerPanel").hidden ? openPanel("list") : closePanel();
+$("layerClose").onclick=closePanel;
+$("satBack").onclick=()=>openPanel("list");
+$("histBack").onclick=()=>openPanel("list");
+
+function layerTitle(d){ return d.kind==="historical" ? `${d.year?d.year+" · ":""}${d.name||"Untitled map"}` : d.name; }
+function rowActions(d){
+  if(confirmLayerDel===d.id){
+    const what = d.kind==="streets" ? "the street data" : `“${esc(d.name||"this map")}”`;
+    return `<div class="confirm" style="width:100%">Remove ${what}? ${d.kind==="streets"?"You can download it again later.":"Its scan is deleted for good."}<div class="row"><button class="btn danger" type="button" data-act="del-yes">Remove</button><button class="btn ghost" type="button" data-act="del-no">Keep</button></div></div>`;
+  }
+  if(d.kind==="satellite") return `<button class="btn" type="button" data-act="sat">Replace image or add 1 m tiles</button>`;
+  if(d.kind==="relief") return `<button class="btn" type="button" data-act="relief">Manage tiles</button>`;
+  if(d.kind==="historical") return `<button class="btn" type="button" data-act="align">Adjust alignment</button><button class="btn ghost danger" type="button" data-act="del">Delete</button>`;
+  if(d.kind==="streets") return `<button class="btn" type="button" data-act="streets">Update data</button><button class="btn ghost danger" type="button" data-act="del">Remove</button>`;
+  return "";
+}
+function renderLayerPanel(){
+  if(panelMode!=="list" || $("layerPanel").hidden) return;
+  const defs=layerDefs().slice().reverse(); // the list reads top to bottom like the stack
+  $("layerList").innerHTML = defs.map(d=>{
+    if(d.missing) return `<li class="lrow missing"><span class="lsw idle" aria-hidden="true"></span><span class="lmeta"><b>${esc(d.name)}</b><span>${esc(d.sub)}</span></span><button class="btn" type="button" data-add="${d.add}">Add</button></li>`;
+    const st=stateOf(d.id,d.kind), title=layerTitle(d), pct=Math.round(st.op*100), more=!!rowActions(d);
+    return `<li class="lrow${st.on?" on":""}" data-id="${esc(d.id)}">
+      <label class="lsw"><input type="checkbox" ${st.on?"checked":""} aria-label="Show ${esc(title)}"><span></span></label>
+      <span class="lmeta"><b>${esc(title)}</b><span>${esc(d.sub)}</span></span>
+      ${more?`<button class="lmore" type="button" aria-label="More for ${esc(title)}" aria-expanded="${openRow===d.id}">⋯</button>`:`<span></span>`}
+      <input class="lop" type="range" min="0" max="100" value="${pct}" aria-label="${esc(title)} opacity">
+      <span class="lpct">${pct}%</span>
+      ${openRow===d.id?`<div class="lacts">${rowActions(d)}</div>`:""}
+    </li>`;
+  }).join("") + `<li class="lrow base"><span class="lsw clay" aria-hidden="true"></span><span class="lmeta"><b>Clay</b><span>Plain terrain under everything</span></span></li>`;
+}
+const rowDef = el => { const id=el.closest(".lrow")?.dataset.id; return id ? layerDefs().find(d=>d.id===id) : null; };
+$("layerList").addEventListener("change",e=>{
+  if(!e.target.matches(".lsw input")) return;
+  const d=rowDef(e.target); if(!d) return;
+  setLayer(d.id,{on:e.target.checked});
+  if(e.target.checked && stateOf(d.id,d.kind).op===0) setLayer(d.id,{op:1});
+  applyLayer();
+});
+$("layerList").addEventListener("input",e=>{
+  if(!e.target.matches(".lop")) return;
+  const d=rowDef(e.target); if(!d) return;
+  const v=+e.target.value, row=e.target.closest(".lrow");
+  row.querySelector(".lpct").textContent=v+"%";
+  setLayer(d.id,{op:v/100});
+  if(!stateOf(d.id,d.kind).on && v>0){ setLayer(d.id,{on:true}); row.classList.add("on"); row.querySelector(".lsw input").checked=true; }
+  applyLayer({panel:false});
+});
+$("layerList").addEventListener("click",async e=>{
+  const add=e.target.closest("[data-add]")?.dataset.add;
+  if(add){
+    if(!db||!assets){ $("histNote").textContent="Adding layers needs edit access to this page while signed in."; return; }
+    openPanel(add); return;
+  }
+  if(e.target.closest(".lmore")){ const d=rowDef(e.target); openRow = openRow===d?.id ? null : d?.id; confirmLayerDel=null; renderLayerPanel(); return; }
+  const act=e.target.closest("[data-act]")?.dataset.act; if(!act) return;
+  const d=rowDef(e.target); if(!d) return;
+  if(act==="sat") openPanel("sat");
+  if(act==="relief") openPanel("relief");
+  if(act==="streets") openPanel("streets");
+  if(act==="align") startAlign({...d, shift:{e:d.shift?.e||0, n:d.shift?.n||0}}, false);
+  if(act==="del"){ confirmLayerDel=d.id; renderLayerPanel(); }
+  if(act==="del-no"){ confirmLayerDel=null; renderLayerPanel(); }
+  if(act==="del-yes"){
+    try{
+      if(d.kind==="streets") await removeStreets();
+      else {
+        await db.doc("layers/"+d.id).delete();
+        if(d.assetId && assets) assets.delete(d.assetId).catch(()=>{});
+        delete layerState[d.id]; saveLocal();
+      }
+      confirmLayerDel=null; openRow=null; applyLayer();
+    }catch(err){ e.target.closest(".lacts")?.insertAdjacentHTML("beforeend",`<p class="err">Couldn’t remove: ${esc(err?.message||err)}</p>`); }
+  }
+});
+
+$("addHist").onclick=()=>{
+  if(!db||!assets){ $("histNote").textContent="Adding maps needs edit access to this page while signed in."; return; }
+  $("fHist").value=""; $("histHint").textContent=""; $("histHint").className="hint"; openPanel("import");
+};
+
+/* satellite import (unchanged behavior) */
+const satDrop=$("satDrop");
+["dragenter","dragover"].forEach(t=>satDrop.addEventListener(t,e=>{e.preventDefault();satDrop.classList.add("over");}));
+["dragleave","drop"].forEach(t=>satDrop.addEventListener(t,e=>{e.preventDefault();satDrop.classList.remove("over");}));
+satDrop.addEventListener("drop",e=>{ const f=e.dataTransfer.files[0]; if(f) importSat(f); });
+$("fSat").onchange=e=>{ const f=e.target.files[0]; if(f) importSat(f); };
+async function importSat(file){
+  const hint=$("satHint");
+  if(!db||!assets){ hint.textContent="Saving imagery needs edit access to this page while signed in."; return; }
+  hint.textContent="Preparing image…";
+  try{
+    const bmp=await createImageBitmap(file);
+    const ratio=bmp.width/bmp.height, want=(SAT_BBOX.east-SAT_BBOX.west)/(SAT_BBOX.north-SAT_BBOX.south);
+    const s=Math.min(1,4096/bmp.width);
+    const c=document.createElement("canvas"); c.width=Math.round(bmp.width*s); c.height=Math.round(bmp.height*s);
+    c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+    const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",0.88));
+    hint.textContent="Uploading…";
+    const up=await assets.upload(blob,{type:"image/jpeg"});
+    const old=basemap?.id;
+    await db.doc("settings/basemap").set({id:up.id,url:up.url,width:c.width,height:c.height,bbox:SAT_BBOX,updatedAt:new Date().toISOString()});
+    if(old && old!==up.id) assets.delete(old).catch(()=>{});
+    setLayer("satellite",{on:true}); applyLayer();
+    hint.textContent = Math.abs(ratio-want)/want>0.04 ? "Saved. The image’s proportions don’t match the circle’s area, so it may look stretched. The link above gives an exact fit." : "Saved. Satellite view is on.";
+    setTimeout(()=>openPanel("list"),1400);
+  }catch(err){ hint.textContent = err?.code==="too_large" ? "That image is too large. Save it at a smaller size and try again." : "Couldn’t save the image: "+(err?.message||err); }
+}
+
+/* historical map import */
+function guessFromName(fn){
+  const base=fn.replace(/\.[^.]+$/,"");
+  const m=base.match(/^[A-Z]{2}_(.+?)_\d+_(\d{4})_(\d+)/); // topoView: CA_Tamalpais_298xxx_1897_62500_geo
+  if(m) return {name:m[1].replace(/_/g," ").replace(/([a-z])([A-Z])/g,"$1 $2").replace(/^Mt /,"Mt. "), year:m[2], scale:+m[3], credit:`USGS · 1:${(+m[3]).toLocaleString()}`, topo:true};
+  const y=base.match(/(1[6-9]\d\d|20\d\d)/);
+  return {name:base.replace(/[_-]+/g," ").replace(/\s+/g," ").trim().slice(0,60), year:y?y[1]:"", scale:null, credit:"", topo:false};
+}
+async function loadSource(blob){
+  let bmp;
+  try{ bmp=await createImageBitmap(blob); }catch(e){ throw new Error("That file couldn’t be read as an image. Try a JPEG or PNG."); }
+  const s=Math.min(1, Math.sqrt(16e6/(bmp.width*bmp.height)), 8192/Math.max(bmp.width,bmp.height));
+  const c=document.createElement("canvas"); c.width=Math.round(bmp.width*s); c.height=Math.round(bmp.height*s);
+  const g=c.getContext("2d"); g.drawImage(bmp,0,0,c.width,c.height); bmp.close?.();
+  return {canvas:c, w:c.width, h:c.height, data:g.getImageData(0,0,c.width,c.height).data};
+}
+async function readKmz(file){
+  if(!window.JSZip) throw new Error("The KMZ reader didn’t load. Download the JPEG version instead.");
+  let zip; try{ zip=await JSZip.loadAsync(file); }catch(e){ throw new Error("That KMZ couldn’t be opened."); }
+  const names=Object.keys(zip.files), kmlName=names.find(n=>/\.kml$/i.test(n));
+  if(!kmlName) throw new Error("That KMZ has no map overlay inside.");
+  const doc=new DOMParser().parseFromString(await zip.file(kmlName).async("text"),"application/xml");
+  const go=doc.getElementsByTagName("GroundOverlay")[0];
+  if(!go) throw new Error("That KMZ has no image overlay to place.");
+  const href=go.getElementsByTagName("href")[0]?.textContent.trim()||"";
+  let corners; // [lon,lat] for image top-left, top-right, bottom-right, bottom-left
+  const box=go.getElementsByTagName("LatLonBox")[0], quad=go.getElementsByTagNameNS("*","LatLonQuad")[0];
+  if(box){
+    const g=t=>parseFloat(box.getElementsByTagName(t)[0]?.textContent);
+    const N=g("north"), S=g("south"), E=g("east"), W=g("west"), rot=(g("rotation")||0)*Math.PI/180;
+    const cx=(E+W)/2, cy=(N+S)/2;
+    corners=[[W,N],[E,N],[E,S],[W,S]].map(([x,y])=>{ const dx=x-cx, dy=y-cy; return [cx+dx*Math.cos(rot)-dy*Math.sin(rot), cy+dx*Math.sin(rot)+dy*Math.cos(rot)]; });
+  } else if(quad){
+    const p=quad.getElementsByTagName("coordinates")[0].textContent.trim().split(/\s+/).map(t=>t.split(",").map(Number)); // LL, LR, UR, UL
+    corners=[p[3],p[2],p[1],p[0]].map(q=>[q[0],q[1]]);
+  } else throw new Error("That KMZ doesn’t say where the map belongs.");
+  if(corners.flat().some(v=>!isFinite(v))) throw new Error("That KMZ’s coordinates couldn’t be read.");
+  const base=href.split("/").pop().toLowerCase();
+  const imgEntry=zip.file(href) || zip.file(names.find(n=>n.toLowerCase().endsWith(base) && !zip.files[n].dir) || "");
+  if(!imgEntry) throw new Error("The map image inside that KMZ couldn’t be found.");
+  const name=(go.getElementsByTagName("name")[0]||doc.getElementsByTagName("name")[0])?.textContent.trim()||"";
+  return {blob:await imgEntry.async("blob"), corners, name};
+}
+function homography(from, to){ // solve the 8 coefficients mapping 4 points `from` -> `to`
+  const A=[], b=[];
+  for(let i=0;i<4;i++){ const [x,y]=from[i], [u,v]=to[i];
+    A.push([x,y,1,0,0,0,-u*x,-u*y]); b.push(u);
+    A.push([0,0,0,x,y,1,-v*x,-v*y]); b.push(v); }
+  for(let c=0;c<8;c++){
+    let p=c; for(let r=c+1;r<8;r++) if(Math.abs(A[r][c])>Math.abs(A[p][c])) p=r;
+    if(Math.abs(A[p][c])<1e-12) throw new Error("Those four points don’t make a usable shape. Make sure no three of them sit on one line.");
+    [A[c],A[p]]=[A[p],A[c]]; [b[c],b[p]]=[b[p],b[c]];
+    for(let r=0;r<8;r++){ if(r===c) continue; const f=A[r][c]/A[c][c]; if(!f) continue; for(let k=c;k<8;k++) A[r][k]-=f*A[c][k]; b[r]-=f*b[c]; }
+  }
+  return b.map((v,i)=>v/A[i][i]);
+}
+const applyH=(h,x,y)=>{ const w=h[6]*x+h[7]*y+1; return [(h[0]*x+h[1]*y+h[2])/w, (h[3]*x+h[4]*y+h[5])/w]; };
+function overlapsBlock(coverage){
+  const lons=coverage.filter((_,i)=>i%2===0), lats=coverage.filter((_,i)=>i%2===1);
+  return Math.min(...lons)<EXT.east && Math.max(...lons)>EXT.west && Math.min(...lats)<EXT.north && Math.max(...lats)>EXT.south;
+}
+// Resample the scan into a north-up image covering the terrain block, using h: (km east, km north of City Hall) -> scan pixel
+async function warp(src, h, progress){
+  const dW=EXT.east-EXT.west, dH=EXT.north-EXT.south;
+  const Wo=3200, Ho=Math.round(Wo*dH*KY/(dW*KX));
+  const out=document.createElement("canvas"); out.width=Wo; out.height=Ho;
+  const g=out.getContext("2d"), img=g.createImageData(Wo,Ho), O=img.data, S=src.data, sw=src.w, sh=src.h;
+  const dx=dW*KX/Wo, x0=(EXT.west-CLON)*KX+dx/2;
+  for(let j=0;j<Ho;j++){
+    const y=(EXT.north-(j+0.5)/Ho*dH-CLAT)*KY;
+    const a0=h[1]*y+h[2], b0=h[4]*y+h[5], w0=h[7]*y+1;
+    let x=x0, o=j*Wo*4;
+    for(let i=0;i<Wo;i++, x+=dx, o+=4){
+      const w=h[6]*x+w0, u=(h[0]*x+a0)/w-0.5, v=(h[3]*x+b0)/w-0.5;
+      O[o+3]=255;
+      if(!(u>=0 && v>=0 && u<sw-1 && v<sh-1)) continue;
+      const iu=u|0, iv=v|0, fu=u-iu, fv=v-iv, p=(iv*sw+iu)*4, q=p+sw*4;
+      for(let c=0;c<3;c++){ const top=S[p+c]+(S[p+4+c]-S[p+c])*fu, bot=S[q+c]+(S[q+4+c]-S[q+c])*fu; O[o+c]=top+(bot-top)*fv; }
+    }
+    if(j%96===0){ progress?.(Math.round(j/Ho*100)); await new Promise(r=>setTimeout(r)); }
+  }
+  g.putImageData(img,0,0);
+  return out;
+}
+
+const histDrop=$("histDrop");
+["dragenter","dragover"].forEach(t=>histDrop.addEventListener(t,e=>{e.preventDefault();histDrop.classList.add("over");}));
+["dragleave","drop"].forEach(t=>histDrop.addEventListener(t,e=>{e.preventDefault();histDrop.classList.remove("over");}));
+histDrop.addEventListener("drop",e=>{ const f=e.dataTransfer.files[0]; if(f) importHist(f); });
+$("fHist").onchange=e=>{ const f=e.target.files[0]; if(f) importHist(f); };
+async function importHist(file){
+  const hint=$("histHint"); hint.className="hint"; hint.textContent="Reading the file…";
+  try{
+    const guess=guessFromName(file.name);
+    if(/\.tiff?$/i.test(file.name)) throw new Error("Browsers can’t read GeoTIFFs. Download the KMZ or JPEG version instead.");
+    if(/\.kmz$/i.test(file.name) || /kmz|zip/.test(file.type)){
+      const k=await readKmz(file);
+      const coverage=k.corners.flat();
+      if(!overlapsBlock(coverage)) throw new Error("That map doesn’t overlap the 3-mile circle around City Hall.");
+      const src=await loadSource(k.blob);
+      const h=homography(k.corners.map(ll2km), [[0,0],[src.w,0],[src.w,src.h],[0,src.h]]);
+      const canvas=await warp(src, h, p=>{ hint.textContent=`Fitting the map to the terrain… ${p}%`; });
+      hint.textContent="";
+      const kYear=(k.name.match(/(1[6-9]\d\d|20\d\d)/)||[])[1];
+      startAlign({id:"preview-"+Date.now(), kind:"historical", canvas, name:guess.topo?guess.name:(k.name||guess.name), year:guess.year||kYear||"", credit:guess.credit, bbox:EXT, coverage, shift:{e:0,n:0}}, true, "Step 2 · Check the fit");
+      return;
+    }
+    const src=await loadSource(file);
+    hint.textContent="";
+    openCalib(src, guess);
+  }catch(err){ hint.className="err"; hint.textContent=err?.message||String(err); }
+}
+
+/* corner marking */
+let calib=null;
+$("cPreset").innerHTML = QUADS.map(q=>`<option value="${q.id}">${esc(q.label)}</option>`).join("")+`<option value="custom">Another map (enter coordinates)</option>`;
+function fillPreset(){
+  const q=QUADS.find(q=>q.id===$("cPreset").value);
+  if(q){
+    [[q.north,q.west],[q.north,q.east],[q.south,q.east],[q.south,q.west]].forEach(([la,lo],i)=>{ $("cLat"+i).value=la; $("cLon"+i).value=lo; });
+    $("cPresetHint").textContent="Mark the four corners where the map’s border lines meet, starting top-left and going clockwise. Check these numbers against the coordinates printed at each corner.";
+  } else {
+    $("cPresetHint").textContent="Mark any four points you know the coordinates of, such as graticule crossings or landmarks, and type each one’s latitude and longitude.";
+  }
+  updateCalibUI();
+}
+$("cPreset").onchange=fillPreset;
+for(let i=0;i<4;i++){ $("cLat"+i).oninput=updateCalibUI; $("cLon"+i).oninput=updateCalibUI; }
+function openCalib(src, guess){
+  const q=QUADS.find(q=>q.match.test(guess.name) && (!guess.scale || q.scale===guess.scale)) || QUADS.find(q=>q.match.test(guess.name));
+  calib={src, guess, pts:[null,null,null,null], cur:0, loupeAt:null, layout:null};
+  $("cPreset").value = q ? q.id : "custom";
+  if(!q) for(let i=0;i<4;i++){ $("cLat"+i).value=""; $("cLon"+i).value=""; }
+  $("calibErr").hidden=true; $("loupe").hidden=true;
+  $("layerPanel").hidden=true; $("calib").hidden=false;
+  fillPreset(); drawCalib();
+}
+function readPoints(){ return [0,1,2,3].map(i=>[parseFloat($("cLon"+i).value), parseFloat($("cLat"+i).value)]); }
+function pointsValid(ll){ return ll.every(([lo,la])=>isFinite(lo)&&isFinite(la)&&Math.abs(la)<=90&&Math.abs(lo)<=180); }
+function updateCalibUI(){
+  if(!calib) return;
+  const custom=$("cPreset").value==="custom";
+  $("calibChips").innerHTML=calib.pts.map((p,i)=>`<button type="button" class="cchip${p?" done":""}${i===calib.cur?" cur":""}" data-i="${i}">${i+1}${custom?"":" · "+CORNER_NAMES[i]}${p?" ✓":""}</button>`).join("");
+  const n=calib.cur;
+  $("calibMsg").textContent = calib.pts.every(Boolean)
+    ? " All four points are marked. Tap a chip to redo one, or fit the map."
+    : custom ? ` Click point ${n+1} on the scan.` : ` Click the ${CORNER_NAMES[n]} corner of the map’s border on the scan.`;
+  $("calibNext").disabled = !(calib.pts.every(Boolean) && pointsValid(readPoints()));
+}
+$("calibChips").onclick=e=>{ const c=e.target.closest(".cchip"); if(!c) return; calib.cur=+c.dataset.i; $("loupe").hidden=true; drawCalib(); updateCalibUI(); };
+function drawCalib(){
+  if(!calib) return;
+  const st=$("calibStage"), c=$("calibCanvas"), dpr=devicePixelRatio||1;
+  const s=Math.min((st.clientWidth-24)/calib.src.w, (st.clientHeight-24)/calib.src.h);
+  if(!(s>0)) return;
+  const w=calib.src.w*s, h=calib.src.h*s;
+  c.style.width=w+"px"; c.style.height=h+"px"; c.width=Math.round(w*dpr); c.height=Math.round(h*dpr);
+  const g=c.getContext("2d"); g.setTransform(dpr*s,0,0,dpr*s,0,0); g.drawImage(calib.src.canvas,0,0); g.setTransform(dpr,0,0,dpr,0,0);
+  const accent=cssVar("--accent");
+  calib.pts.forEach((p,i)=>{ if(!p) return; const x=p[0]*s, y=p[1]*s;
+    g.strokeStyle=accent; g.lineWidth=2; g.beginPath(); g.arc(x,y,9,0,Math.PI*2); g.stroke();
+    g.beginPath(); g.moveTo(x-14,y); g.lineTo(x+14,y); g.moveTo(x,y-14); g.lineTo(x,y+14); g.stroke();
+    g.fillStyle=accent; g.font="700 13px system-ui,sans-serif"; g.fillText(String(i+1), x+11, y-11); });
+  calib.layout={s};
+}
+new ResizeObserver(()=>{ if(calib && !$("calib").hidden){ $("loupe").hidden=true; drawCalib(); } }).observe($("calibStage"));
+const LOUPE_R=140, LOUPE_SIZE=220; // source pixels shown, css size
+$("calibCanvas").onclick=e=>{
+  if(!calib?.layout) return;
+  const r=e.currentTarget.getBoundingClientRect(), s=calib.layout.s;
+  const sx=(e.clientX-r.left)/s, sy=(e.clientY-r.top)/s;
+  const lp=$("loupe"), st=$("calibStage").getBoundingClientRect(), dpr=devicePixelRatio||1;
+  calib.loupeAt=[sx,sy];
+  lp.width=LOUPE_SIZE*dpr; lp.height=LOUPE_SIZE*dpr; lp.style.width=lp.style.height=LOUPE_SIZE+"px";
+  const g=lp.getContext("2d"), k=lp.width/LOUPE_R, x0=sx-LOUPE_R/2, y0=sy-LOUPE_R/2;
+  g.fillStyle="#fff"; g.fillRect(0,0,lp.width,lp.height);
+  const cx0=Math.max(0,x0), cy0=Math.max(0,y0), cx1=Math.min(calib.src.w,x0+LOUPE_R), cy1=Math.min(calib.src.h,y0+LOUPE_R);
+  if(cx1>cx0 && cy1>cy0) g.drawImage(calib.src.canvas, cx0,cy0,cx1-cx0,cy1-cy0, (cx0-x0)*k,(cy0-y0)*k,(cx1-cx0)*k,(cy1-cy0)*k);
+  g.strokeStyle="rgba(200,40,30,.55)"; g.lineWidth=1*dpr; g.beginPath(); g.moveTo(lp.width/2,0); g.lineTo(lp.width/2,lp.height); g.moveTo(0,lp.height/2); g.lineTo(lp.width,lp.height/2); g.stroke();
+  lp.style.left=Math.min(Math.max(e.clientX-st.left-LOUPE_SIZE/2,4), st.width-LOUPE_SIZE-4)+"px";
+  lp.style.top=Math.min(Math.max(e.clientY-st.top-LOUPE_SIZE/2,4), st.height-LOUPE_SIZE-4)+"px";
+  lp.hidden=false;
+  $("calibMsg").textContent=" Now click the exact spot inside the magnifier.";
+};
+$("loupe").onclick=e=>{
+  const r=e.currentTarget.getBoundingClientRect(), [sx,sy]=calib.loupeAt;
+  calib.pts[calib.cur]=[sx-LOUPE_R/2+(e.clientX-r.left)/r.width*LOUPE_R, sy-LOUPE_R/2+(e.clientY-r.top)/r.height*LOUPE_R];
+  $("loupe").hidden=true;
+  const next=calib.pts.findIndex(p=>!p); if(next>=0) calib.cur=next;
+  drawCalib(); updateCalibUI();
+};
+$("calibCancel").onclick=()=>{ calib=null; $("calib").hidden=true; $("loupe").hidden=true; openPanel("import"); };
+$("calibNext").onclick=async()=>{
+  const err=$("calibErr"); err.hidden=true;
+  const ll=readPoints();
+  try{
+    const km=ll.map(ll2km), h=homography(km, calib.pts);
+    let coverage;
+    if($("cPreset").value==="custom"){
+      const inv=homography(calib.pts, km), w=calib.src.w, hh=calib.src.h;
+      coverage=[[0,0],[w,0],[w,hh],[0,hh]].flatMap(([x,y])=>{ const [kx,ky]=applyH(inv,x,y); return [CLON+kx/KX, CLAT+ky/KY]; });
+    } else coverage=ll.flat();
+    if(!overlapsBlock(coverage)) throw new Error("With these coordinates the map doesn’t overlap the 3-mile circle. Check the numbers.");
+    $("calibNext").disabled=true;
+    const canvas=await warp(calib.src, h, p=>{ $("calibMsg").textContent=` Fitting the map to the terrain… ${p}%`; });
+    const g=calib.guess; calib=null; $("calib").hidden=true;
+    startAlign({id:"preview-"+Date.now(), kind:"historical", canvas, name:g.name, year:g.year, credit:g.credit, bbox:EXT, coverage, shift:{e:0,n:0}}, true, "Step 3 · Line it up");
+  }catch(ex){ err.textContent=ex?.message||String(ex); err.hidden=false; updateCalibUI(); }
+};
+
+/* alignment */
+function startAlign(L, isNew, label){
+  preview=L; preview.isNew=isNew;
+  L.op = isNew ? 0.75 : stateOf(L.id,"historical").op;
+  $("alignStep").textContent = label || "Adjust alignment";
+  $("lName").value=L.name||""; $("lYear").value=L.year||""; $("lBlend").value=Math.round(L.op*100);
+  $("alignErr").hidden=true; $("alignSave").textContent = isNew ? "Save map" : "Save alignment";
+  updateOffset(); openPanel("align"); applyLayer();
+  flyTo(new THREE.Vector3(0,0.1,0), new THREE.Vector3(0,15.5,0.01));
+}
+function cancelAlign(){ preview=null; applyLayer(); }
+function updateOffset(){
+  const s=preview?.shift||{e:0,n:0}, parts=[];
+  if(s.e) parts.push(`${Math.abs(s.e)} m ${s.e>0?"E":"W"}`);
+  if(s.n) parts.push(`${Math.abs(s.n)} m ${s.n>0?"N":"S"}`);
+  $("nOff").innerHTML = parts.length ? parts.map(esc).join("<br>") : "0 m";
+}
+function nudge(ex,ny){
+  if(!preview) return;
+  const step=+$("nStep").value;
+  preview.shift={e:preview.shift.e+ex*step, n:preview.shift.n+ny*step};
+  updateOffset();
+  ensureTex(preview).then(t=>placeTex(t.tex, preview));
+}
+document.querySelectorAll(".nudge [data-d]").forEach(b=>b.onclick=()=>{ const [x,y]=b.dataset.d.split(",").map(Number); nudge(x,y); });
+$("nReset").onclick=()=>{ if(!preview) return; preview.shift={e:0,n:0}; updateOffset(); ensureTex(preview).then(t=>placeTex(t.tex, preview)); };
+document.addEventListener("keydown",e=>{
+  if(!preview || $("lpAlign").hidden || $("layerPanel").hidden) return;
+  if(/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName||"") && document.activeElement.type!=="range") return;
+  const d={ArrowUp:[0,1],ArrowDown:[0,-1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];
+  if(d){ e.preventDefault(); nudge(...d); }
+});
+$("lBlend").oninput=e=>{ if(!preview) return; preview.op=e.target.value/100; const o=overlayPool.get("preview"); if(o) o.mat.opacity=preview.op; };
+$("alignCancel").onclick=()=>{ cancelAlign(); openPanel("list"); };
+$("alignSave").onclick=async()=>{
+  const L=preview, btn=$("alignSave"), err=$("alignErr"); if(!L) return; err.hidden=true;
+  const name=$("lName").value.trim()||"Untitled map", year=$("lYear").value.trim();
+  if(year && !/^\d{4}$/.test(year)){ err.textContent="Enter the year as four digits, like 1897."; err.hidden=false; return; }
+  if(!db||!assets){ err.textContent="Saving maps needs edit access to this page while signed in."; err.hidden=false; return; }
+  btn.disabled=true; btn.textContent="Saving…";
+  try{
+    if(L.isNew){
+      const blob=await new Promise(r=>L.canvas.toBlob(r,"image/jpeg",0.86));
+      const up=await assets.upload(blob,{type:"image/jpeg"});
+      const ref=await db.collection("layers").add({name, year, credit:L.credit||"", url:up.url, assetId:up.id, bbox:L.bbox, coverage:L.coverage, shift:L.shift, createdAt:new Date().toISOString()});
+      const cached=texCache.get(L.id+"|preview"); if(cached) texCache.set(ref.id+"|"+up.url, cached);
+      setLayer(ref.id,{on:true, op:L.op});
+    } else {
+      await db.doc("layers/"+L.id).update({name, year, shift:L.shift});
+      setLayer(L.id,{on:true, op:L.op});
+    }
+    preview=null; saveLocal(); openPanel("list"); applyLayer();
+  }catch(ex){
+    err.textContent = ex?.code==="too_large" ? "The fitted map is too large to upload." : "Couldn’t save the map: "+(ex?.message||ex);
+    err.hidden=false;
+  }finally{ btn.disabled=false; btn.textContent = L.isNew ? "Save map" : "Save alignment"; }
+};
+
+/* ---------- high-resolution elevation ---------- */
+// Grid the imported data is resampled onto: the 3-mile circle plus a small margin, ~5 m per sample
+const HIRES = {west:-122.6040, east:-122.4915, south:37.8620, north:37.9530, w:3950, h:4040}; // 2.5 m spacing
+const ELEV_BANDS = 4; // saved as four PNG strips so each stays well under the upload limit
+let elevDoc = null, loadedElevUrl = null;
+
+function setDEM(next){
+  DEM = next;
+  Object.assign(EXT, {west:DEM.west, south:DEM.south, east:DEM.east, north:DEM.north});
+  const fine = DEM.w > 2500 && !IS_SMALL, hi = DEM.w > 600;
+  if(fine) buildMesh(480,1500); else if(hi) buildMesh(320,1000); else buildMesh(130,400);
+  paintTerrain(); placeLabels(); render(); applyLayer(); renderElevInfo();
+}
+function renderElevInfo(){
+  const hi = DEM !== BASE_DEM;
+  $("elevText").textContent = hi
+    ? `USGS 3DEP, ${DEM.spacing ? "about "+DEM.spacing+" m" : "high-resolution"} grid${DEM.coverage!=null && DEM.coverage<99.5 ? ` · covers ${DEM.coverage}% of the circle` : ""}`
+    : "USGS 10 m data, sampled about every 100 m";
+  $("elevBtn").textContent = hi ? "Replace elevation data" : "Load high-resolution data";
+  $("elevRevert").hidden = !hi;
+}
+$("elevBtn").onclick=()=>{
+  if(!db||!assets){ $("elevText").textContent="Loading elevation data needs edit access to this page while signed in."; return; }
+  $("fElev").value=""; $("elevHint").className="hint"; $("elevHintText").textContent=""; openPanel("elev");
+};
+$("elevBack").onclick=()=>openPanel("list");
+$("elevRevert").onclick=async()=>{
+  try{ const old=elevAssetIds(elevDoc); await db.doc("settings/elevation").delete(); if(assets) old.forEach(i=>assets.delete(i).catch(()=>{})); }
+  catch(err){ $("elevText").textContent="Couldn’t switch back: "+(err?.message||err); }
+};
+const elevDrop=$("elevDrop");
+["dragenter","dragover"].forEach(t=>elevDrop.addEventListener(t,e=>{e.preventDefault();elevDrop.classList.add("over");}));
+["dragleave","drop"].forEach(t=>elevDrop.addEventListener(t,e=>{e.preventDefault();elevDrop.classList.remove("over");}));
+elevDrop.addEventListener("drop",e=>{ const f=[...e.dataTransfer.files]; if(f.length) importElevation(f); });
+$("fElev").onchange=e=>{ const f=[...e.target.files]; if(f.length) importElevation(f); };
+
+function loadScript(src){
+  return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=src; s.onload=res; s.onerror=()=>rej(new Error("The GeoTIFF reader couldn’t load. Check your connection and try again.")); document.head.appendChild(s); });
+}
+function utmZone(code){
+  if(code>=26901 && code<=26923) return code-26900;   // NAD83 / UTM
+  if(code>=32601 && code<=32660) return code-32600;   // WGS 84 / UTM north
+  if(code===6339) return 10; if(code===6340) return 11; // NAD83(2011) / UTM 10N, 11N
+  return null;
+}
+function utmForward(lat, lon, zone){ // GRS80 transverse Mercator (Snyder), meters
+  const a=6378137, f=1/298.257222101, k0=0.9996, e2=f*(2-f), ep2=e2/(1-e2);
+  const phi=lat*Math.PI/180, lam=lon*Math.PI/180, lam0=((zone-1)*6-177)*Math.PI/180;
+  const s=Math.sin(phi), c=Math.cos(phi), t=Math.tan(phi);
+  const N=a/Math.sqrt(1-e2*s*s), T=t*t, C=ep2*c*c, A=c*(lam-lam0);
+  const M=a*((1-e2/4-3*e2*e2/64-5*e2**3/256)*phi-(3*e2/8+3*e2*e2/32+45*e2**3/1024)*Math.sin(2*phi)+(15*e2*e2/256+45*e2**3/1024)*Math.sin(4*phi)-(35*e2**3/3072)*Math.sin(6*phi));
+  const x=k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120)+500000;
+  const y=k0*(M+N*t*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720));
+  return [x,y];
+}
+function sampleBase(lat,lon){ // bilinear from the built-in grid
+  const B=BASE_DEM, x=Math.min(Math.max((lon-B.west)/(B.east-B.west),0),1)*(B.w-1), y=Math.min(Math.max((B.north-lat)/(B.north-B.south),0),1)*(B.h-1);
+  const x0=Math.floor(x), y0=Math.floor(y), x1=Math.min(x0+1,B.w-1), y1=Math.min(y0+1,B.h-1), fx=x-x0, fy=y-y0, Z=B.z, W=B.w;
+  return (Z[y0*W+x0]*(1-fx)+Z[y0*W+x1]*fx)*(1-fy)+(Z[y1*W+x0]*(1-fx)+Z[y1*W+x1]*fx)*fy;
+}
+
+async function importElevation(files){
+  const hint=$("elevHintText"); $("elevHint").className="hint";
+  const say=t=>{ hint.textContent=t; };
+  try{
+    const bad=files.find(f=>!/\.tiff?$/i.test(f.name));
+    if(bad) throw new Error(`${bad.name} isn’t a GeoTIFF. Drop .tif elevation files.`);
+    if(!window.GeoTIFF){ say("Loading the GeoTIFF reader…"); await loadScript("https://cdn.jsdelivr.net/npm/geotiff@2.0.5"); }
+    if(!window.GeoTIFF?.fromArrayBuffer) throw new Error("The GeoTIFF reader didn’t start. Reload the page and try again.");
+    const G=HIRES, Z=new Float32Array(G.w*G.h).fill(NaN);
+    const dLon=(G.east-G.west)/G.w, dLat=(G.north-G.south)/G.h;
+    const notes=[];
+    for(let fi=0; fi<files.length; fi++){
+      const file=files[fi], tag=files.length>1?` (${fi+1} of ${files.length})`:"";
+      say(`Reading ${file.name}${tag}…`);
+      const tiff=await GeoTIFF.fromArrayBuffer(await file.arrayBuffer());
+      const img=await tiff.getImage();
+      const keys=img.getGeoKeys?.()||{}, [minX,minY,maxX,maxY]=img.getBoundingBox();
+      const pcs=keys.ProjectedCSTypeGeoKey, geographic = keys.GTModelTypeGeoKey===2 || (!pcs && Math.abs(minX)<=180 && Math.abs(maxX)<=180 && Math.abs(minY)<=90 && Math.abs(maxY)<=90);
+      let proj, metersPerUnit;
+      if(geographic){ proj=(lat,lon)=>[lon,lat]; metersPerUnit=KX*1000; }
+      else {
+        const zone=utmZone(pcs);
+        if(!zone) throw new Error(`${file.name} uses a map projection this page can’t read${pcs?` (EPSG ${pcs})`:""}. Use the USGS export link above, or tiles in UTM zone 10.`);
+        proj=(lat,lon)=>utmForward(lat,lon,zone); metersPerUnit=1;
+      }
+      const zMul=(keys.VerticalUnitsGeoKey===9002||keys.VerticalUnitsGeoKey===9003)?0.3048:1;
+      // the part of this file that overlaps the grid, in its own units
+      const cs=[[G.north,G.west],[G.north,G.east],[G.south,G.east],[G.south,G.west]].map(([la,lo])=>proj(la,lo));
+      const gx0=Math.min(...cs.map(c=>c[0])), gx1=Math.max(...cs.map(c=>c[0])), gy0=Math.min(...cs.map(c=>c[1])), gy1=Math.max(...cs.map(c=>c[1]));
+      if(gx1<minX || gx0>maxX || gy1<minY || gy0>maxY){ notes.push(`${file.name} is outside the circle, so it was skipped.`); continue; }
+      const nw=img.getWidth(), nh=img.getHeight(), rx=(maxX-minX)/nw, ry=(maxY-minY)/nh;
+      const x0=Math.max(0,Math.floor((gx0-minX)/rx)-2), x1=Math.min(nw,Math.ceil((gx1-minX)/rx)+2);
+      const y0=Math.max(0,Math.floor((maxY-gy1)/ry)-2), y1=Math.min(nh,Math.ceil((maxY-gy0)/ry)+2);
+      // read at about 1.25 m per sample (enough for the 2.5 m grid) and never more than ~25M samples
+      let scale=Math.min(1, rx*metersPerUnit/1.25); scale=Math.min(scale, Math.sqrt(25e6/((x1-x0)*(y1-y0))));
+      const ww=Math.max(2,Math.round((x1-x0)*scale)), wh=Math.max(2,Math.round((y1-y0)*scale));
+      say(`Reading elevations from ${file.name}${tag}…`);
+      const R=(await img.readRasters({window:[x0,y0,x1,y1], width:ww, height:wh, resampleMethod:"bilinear", samples:[0]}))[0];
+      const nd=parseFloat(img.getGDALNoData?.());
+      const wx0=minX+x0*rx, wy1=maxY-y0*ry, sx=ww/((x1-x0)*rx), sy=wh/((y1-y0)*ry);
+      const ok=v=>isFinite(v) && v!==nd && v>-200 && v<5000;
+      for(let j=0;j<G.h;j++){
+        const lat=G.north-(j+0.5)*dLat;
+        for(let i=0;i<G.w;i++){
+          const k=j*G.w+i; if(!Number.isNaN(Z[k])) continue;
+          const [X,Y]=proj(lat, G.west+(i+0.5)*dLon);
+          const c=(X-wx0)*sx-0.5, r=(wy1-Y)*sy-0.5;
+          if(c<0||r<0||c>ww-1||r>wh-1) continue;
+          const ci=Math.min(c|0,ww-2), ri=Math.min(r|0,wh-2), fx=c-ci, fy=r-ri, p=ri*ww+ci;
+          const a=R[p], b=R[p+1], d=R[p+ww], e=R[p+ww+1];
+          if(ok(a)&&ok(b)&&ok(d)&&ok(e)) Z[k]=((a*(1-fx)+b*fx)*(1-fy)+(d*(1-fx)+e*fx)*fy)*zMul;
+          else { const v=[a,b,d,e].find(ok); if(v!=null) Z[k]=v*zMul; }
+        }
+        if(j%128===0){ say(`Fitting ${file.name}${tag}… ${Math.round(j/G.h*100)}%`); await new Promise(r=>setTimeout(r)); }
+      }
+    }
+    // fill anything the files didn't cover from earlier high-res data (or the built-in data), and measure coverage inside the circle
+    let inside=0, covered=0; const prevHi = DEM!==BASE_DEM;
+    for(let j=0;j<G.h;j++){
+      const lat=G.north-(j+0.5)*dLat;
+      for(let i=0;i<G.w;i++){
+        const k=j*G.w+i, lon=G.west+(i+0.5)*dLon, inC=inCircle(lat,lon);
+        if(inC) inside++;
+        if(Number.isNaN(Z[k])){
+          if(prevHi){ Z[k]=zAt(...ll2uv(lat,lon)); if(inC) covered++; } // keep quarters loaded earlier
+          else Z[k]=sampleBase(lat,lon);
+        } else if(inC) covered++;
+      }
+    }
+    const coverage=Math.round(covered/inside*1000)/10;
+    if(coverage<1) throw new Error(notes[0] || "None of these files cover the 3-mile circle around City Hall.");
+    const spacing=Math.round((G.east-G.west)/G.w*KX*10000)/10;
+    say("Building the terrain…"); await new Promise(r=>setTimeout(r,30));
+    const next={...G, center:BASE_DEM.center, radiusKm:BASE_DEM.radiusKm, z:Z, spacing, coverage};
+    setDEM(next);
+    // save as PNG strips: red/green hold elevation in decimeters (+100 m offset)
+    const parts=[], bandH=Math.ceil(G.h/ELEV_BANDS);
+    for(let p=0;p<ELEV_BANDS;p++){
+      const y0=p*bandH, bh=Math.min(bandH,G.h-y0); if(bh<=0) break;
+      say(`Saving… ${p+1} of ${ELEV_BANDS}`);
+      const c=document.createElement("canvas"); c.width=G.w; c.height=bh;
+      const g=c.getContext("2d"), id=g.createImageData(G.w,bh), D=id.data;
+      for(let k=0,o=y0*G.w;k<G.w*bh;k++,o++){ const v=Math.max(0,Math.min(65535,Math.round((Z[o]+100)*10))); D[k*4]=v>>8; D[k*4+1]=v&255; D[k*4+2]=0; D[k*4+3]=255; }
+      g.putImageData(id,0,0);
+      const blob=await new Promise(r=>c.toBlob(r,"image/png"));
+      const up=await assets.upload(blob,{type:"image/png"});
+      parts.push({id:up.id, url:up.url, y0, h:bh});
+    }
+    const oldIds=elevAssetIds(elevDoc);
+    loadedElevUrl=elevKey({parts});
+    await db.doc("settings/elevation").set({parts, west:G.west, east:G.east, south:G.south, north:G.north, w:G.w, h:G.h, spacing, coverage, files:files.map(f=>f.name).join(", ").slice(0,500), updatedAt:new Date().toISOString()});
+    oldIds.filter(i=>!parts.some(p=>p.id===i)).forEach(i=>assets.delete(i).catch(()=>{}));
+    say(`Done. The terrain now uses about ${spacing} m elevation data${coverage<99.5?`, covering ${coverage}% of the circle (the rest uses the built-in data)`:""}.${notes.length?" "+notes.join(" "):""}`);
+    $("elevHint").className="hint ok";
+  }catch(err){
+    $("elevHint").className="err";
+    say(err?.code==="too_large" ? "The elevation image is too large to save." : (err?.message||String(err)));
+  }
+}
+
+const elevParts = d => d?.parts?.length ? d.parts : d?.url ? [{id:d.id, url:d.url, y0:0, h:d.h}] : [];
+const elevAssetIds = d => elevParts(d).map(p=>p.id).filter(Boolean);
+const elevKey = d => elevParts(d).map(p=>p.url).join("|");
+async function loadElevation(d){
+  const key=elevKey(d);
+  if(!key){ loadedElevUrl=null; if(DEM!==BASE_DEM) setDEM(BASE_DEM); return; }
+  if(key===loadedElevUrl && DEM!==BASE_DEM) return;
+  loadedElevUrl=key;
+  try{
+    const Z=new Float32Array(d.w*d.h);
+    for(const p of elevParts(d)){
+      const img=new Image(); img.src=p.url; await img.decode();
+      const c=document.createElement("canvas"); c.width=d.w; c.height=p.h;
+      const g=c.getContext("2d"); g.drawImage(img,0,0);
+      const D=g.getImageData(0,0,d.w,p.h).data;
+      for(let k=0,o=p.y0*d.w;k<d.w*p.h;k++,o++) Z[o]=(D[k*4]*256+D[k*4+1])/10-100;
+      if(loadedElevUrl!==key) return;
+    }
+    setDEM({west:d.west, east:d.east, south:d.south, north:d.north, w:d.w, h:d.h, center:BASE_DEM.center, radiusKm:BASE_DEM.radiusKm, z:Z, spacing:d.spacing, coverage:d.coverage});
+  }catch(e){ loadedElevUrl=null; $("elevText").textContent="The saved high-resolution elevation couldn’t be loaded, so the built-in data is showing."; }
+}
+
+/* ---------- 1 m tile sets (satellite, lidar relief): a 3×3 grid draped over the terrain ---------- */
+const TILE_PX = 3400, TILE_PY = 2695 /* 3400 × (lat span ÷ lon span), so USGS returns exactly the bbox */, TILE_MARGIN = {lon:0.0007, lat:0.00055}; // ~60 m overlap so edge triangles never sample past a tile
+const TILE_TEX_MAX = Math.min(renderer.capabilities.maxTextureSize||4096, IS_SMALL ? 2048 : 4096);
+const CELLS = [];
+(()=>{ const B=SAT_BBOX, dw=(B.east-B.west)/3, dh=(B.north-B.south)/3;
+  for(let r=0;r<3;r++) for(let c=0;c<3;c++){
+    const core={west:B.west+c*dw, east:B.west+(c+1)*dw, north:B.north-r*dh, south:B.north-(r+1)*dh};
+    const bbox={west:core.west-TILE_MARGIN.lon, east:core.east+TILE_MARGIN.lon, north:core.north+TILE_MARGIN.lat, south:core.south-TILE_MARGIN.lat};
+    CELLS.push({id:`r${r}c${c}`, n:r*3+c+1, index:r*3+c, core, bbox});
+  } })();
+const bboxParam = b => `bbox=${b.west.toFixed(5)},${b.south.toFixed(5)},${b.east.toFixed(5)},${b.north.toFixed(5)}&bboxSR=4326&imageSR=4326&size=${TILE_PX},${TILE_PY}`;
+const TILESETS = {
+  satellite:{key:"satellite", coll:"satTiles", grid:"tileGrid", count:"tileCount", hint:"tileHint", panel:"lpSat", order:2, tiles:new Map(),
+    url:c=>`https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPPlus/ImageServer/exportImage?${bboxParam(c.bbox)}&format=jpg&f=image`},
+  relief:{key:"relief", coll:"reliefTiles", grid:"reliefGrid", count:"reliefCount", hint:"reliefHint", panel:"lpRelief", order:2, tiles:new Map(),
+    url:c=>`https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?${bboxParam(c.bbox)}&format=jpg&renderingRule=${encodeURIComponent('{"rasterFunction":"Hillshade Multidirectional"}')}&f=image`},
+};
+// USGS keeps pixels square in degrees: when the image's aspect doesn't match the requested bbox, it widens the short side around the center.
+function tileExtent(cell, w, h){
+  const b=cell.bbox, lw=b.east-b.west, lh=b.north-b.south, ia=(w&&h)?w/h:lw/lh, cx=(b.west+b.east)/2, cy=(b.north+b.south)/2;
+  if(Math.abs(ia-lw/lh)/(lw/lh)<0.01) return b;
+  return ia < lw/lh ? {west:b.west, east:b.east, north:cy+lw/ia/2, south:cy-lw/ia/2}
+                    : {west:cx-lh*ia/2, east:cx+lh*ia/2, north:b.north, south:b.south};
+}
+const placeTile = t => { if(t.mat?.map) placeTex(t.mat.map,{bbox:tileExtent(t.cell,t.doc?.width,t.doc?.height), shift:{e:0,n:0}}); };
+const tileGroup = new THREE.Group(); scene.add(tileGroup);
+let cellGeos = null; // per cell: geometry holding the terrain triangles whose centroid is in that cell (shared by all tile sets)
+
+function buildCellGeos(){
+  const I=geo.index.array, lists=CELLS.map(()=>[]), B=SAT_BBOX, dw=(B.east-B.west)/3, dh=(B.north-B.south)/3;
+  for(let t=0;t<I.length;t+=3){
+    const a=I[t]*3, b=I[t+1]*3, c=I[t+2]*3;
+    const lon=CLON+(pos[a]+pos[b]+pos[c])/3/KX, lat=CLAT-(pos[a+2]+pos[b+2]+pos[c+2])/3/KY;
+    const col=Math.min(2,Math.max(0,Math.floor((lon-B.west)/dw))), row=Math.min(2,Math.max(0,Math.floor((B.north-lat)/dh)));
+    lists[row*3+col].push(I[t],I[t+1],I[t+2]);
+  }
+  cellGeos=lists.map(l=>{
+    const g=new THREE.BufferGeometry();
+    g.setAttribute("position",geo.getAttribute("position")); g.setAttribute("normal",geo.getAttribute("normal")); g.setAttribute("uv",geo.getAttribute("uv"));
+    g.setIndex(new THREE.BufferAttribute(new Uint32Array(l),1)); g.boundingSphere=geo.boundingSphere; g.boundingBox=geo.boundingBox;
+    return g;
+  });
+}
+const cellGeo = cell => { if(!cellGeos) buildCellGeos(); return cellGeos[cell.index]; };
+const eachTile = f => Object.values(TILESETS).forEach(S=>S.tiles.forEach(t=>f(t,S)));
+// keep tile meshes in step with the terrain mesh when it is rebuilt
+meshHooks.before.push(()=>{ if(cellGeos){ cellGeos.forEach(g=>g.dispose()); cellGeos=null; } });
+meshHooks.after.push(()=>{ eachTile(t=>{ if(t.mesh){ t.mesh.geometry=cellGeo(t.cell); placeTile(t); } }); });
+
+function setHasTiles(S){ return [...S.tiles.values()].some(t=>t.doc?.url); }
+function setAllReady(S){ return CELLS.every(c=>S.tiles.get(c.id)?.ready); }
+const tileOrder = {satellite:{on:false}, relief:{on:false}}; // filled in by applyLayer
+function syncTiles(){
+  Object.values(TILESETS).forEach(S=>{
+    const info=tileOrder[S.key]||{on:false};
+    S.tiles.forEach(t=>{
+      if(info.on && !t.ready && !t.loading && !t.failed && t.doc?.url) loadTile(t,S);
+      if(t.mesh){ t.mesh.visible=!!info.on && t.ready; t.mat.opacity=info.op??1; if(info.on) setDepthOrder(t.mesh,t.mat,info.k,1); }
+    });
+  });
+  const satO=overlayPool.get("satellite"); // the tiles cover the whole circle; skip the base image under them
+  if(satO && tileOrder.satellite.on && setAllReady(TILESETS.satellite)) satO.mesh.visible=false;
+  renderTileGrid();
+}
+function loadTile(t,S){
+  t.loading=true; const url=t.doc.url;
+  const img=new Image();
+  img.onload=()=>{
+    if(t.doc?.url!==url) return;
+    let src=img;
+    if(Math.max(img.width,img.height)>TILE_TEX_MAX){ // scale down for this device's texture budget
+      const s=TILE_TEX_MAX/Math.max(img.width,img.height), c=document.createElement("canvas");
+      c.width=Math.round(img.width*s); c.height=Math.round(img.height*s); c.getContext("2d").drawImage(img,0,0,c.width,c.height); src=c;
+    }
+    const tex = src instanceof HTMLCanvasElement ? new THREE.CanvasTexture(src) : new THREE.Texture(src);
+    tex.wrapS=tex.wrapT=THREE.ClampToEdgeWrapping; tex.anisotropy=MAX_ANISO; tex.needsUpdate=true;
+    if(!t.mat){
+      t.mat=new THREE.MeshLambertMaterial({map:tex, transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-3, polygonOffsetUnits:-6});
+      t.mesh=new THREE.Mesh(cellGeo(t.cell), t.mat); t.mesh.visible=false; tileGroup.add(t.mesh);
+    } else { t.mat.map?.dispose(); t.mat.map=tex; t.mat.needsUpdate=true; }
+    placeTile(t);
+    t.ready=true; t.loading=false; syncTiles();
+  };
+  img.onerror=()=>{ t.loading=false; t.failed=true; renderTileGrid(); };
+  img.src=url;
+}
+function onTileDocs(S, snap){
+  const seen=new Set();
+  snap.docs.forEach(d=>{
+    const cell=CELLS.find(c=>c.id===d.id); if(!cell) return; seen.add(d.id);
+    const data=d.data(); let t=S.tiles.get(d.id);
+    if(!t){ t={cell}; S.tiles.set(d.id,t); }
+    if(t.doc?.url!==data.url){ t.doc=data; t.ready=false; t.loading=false; t.failed=false; if(t.mesh) t.mesh.visible=false; }
+  });
+  S.tiles.forEach((t,id)=>{ if(!seen.has(id)){ if(t.mesh){ tileGroup.remove(t.mesh); t.mat.map?.dispose(); t.mat.dispose(); } S.tiles.delete(id); } });
+  applyLayer();
+}
+
+/* tile grids in the satellite and relief panels */
+function renderTileGrid(){
+  Object.values(TILESETS).forEach(S=>{
+    const el=$(S.grid); if(!el || $(S.panel).hidden) return;
+    el.innerHTML=CELLS.map(c=>{ const t=S.tiles.get(c.id), st=t?.failed?"Couldn’t load":t?.ready?"Added ✓":t?.doc?"Saved ✓":"";
+      return `<div class="tcell${t?.doc?" done":""}" data-id="${c.id}">
+        <span class="tn">${c.n}</span>
+        <a href="${esc(S.url(c))}" target="_blank" rel="noopener">Open tile ↗</a>
+        <label class="tpick">${t?.doc?"Replace":"Drop or choose"}<input type="file" accept="image/jpeg,image/png" aria-label="Tile ${c.n} image"></label>
+        <span class="ts">${st}</span></div>`; }).join("");
+    const n=CELLS.filter(c=>S.tiles.get(c.id)?.doc).length;
+    $(S.count).textContent = n ? `${n} of 9 tiles added` : "";
+  });
+}
+Object.values(TILESETS).forEach(S=>{
+  const g=$(S.grid);
+  g.addEventListener("change",e=>{ const cell=e.target.closest(".tcell"); const f=e.target.files?.[0]; if(cell&&f) importTile(S,cell.dataset.id,f); });
+  ["dragenter","dragover"].forEach(t=>g.addEventListener(t,e=>{ const c=e.target.closest(".tcell"); if(c){ e.preventDefault(); c.classList.add("over"); } }));
+  ["dragleave","drop"].forEach(t=>g.addEventListener(t,e=>{ const c=e.target.closest(".tcell"); if(c){ e.preventDefault(); c.classList.remove("over"); } }));
+  g.addEventListener("drop",e=>{ const c=e.target.closest(".tcell"), f=e.dataTransfer?.files?.[0]; if(c&&f) importTile(S,c.dataset.id,f); });
+});
+async function importTile(S, id, file){
+  const hint=$(S.hint), cell=CELLS.find(c=>c.id===id); hint.className="hint";
+  if(!db||!assets){ hint.textContent="Adding tiles needs edit access to this page while signed in."; return; }
+  try{
+    hint.textContent=`Preparing tile ${cell.n}…`;
+    let bmp; try{ bmp=await createImageBitmap(file); }catch(e){ throw new Error("That file couldn’t be read as an image."); }
+    const ratio=bmp.width/bmp.height;
+    const s=Math.min(1,TILE_PX/Math.max(bmp.width,bmp.height)), c=document.createElement("canvas");
+    c.width=Math.round(bmp.width*s); c.height=Math.round(bmp.height*s); c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+    const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",0.88));
+    hint.textContent=`Uploading tile ${cell.n}…`;
+    const up=await assets.upload(blob,{type:"image/jpeg"});
+    const old=S.tiles.get(id)?.doc?.id;
+    await db.doc(S.coll+"/"+id).set({id:up.id, url:up.url, bbox:cell.bbox, width:c.width, height:c.height, updatedAt:new Date().toISOString()});
+    if(old && old!==up.id) assets.delete(old).catch(()=>{});
+    setLayer(S.key,{on:true}); applyLayer();
+    const want=TILE_PX/TILE_PY;
+    hint.textContent = (Math.abs(ratio-want)/want>0.03 && Math.abs(ratio-1)>0.03)
+      ? `Tile ${cell.n} saved, but its shape doesn’t match, so it may not be the right download. Use the “Open tile” link for square ${cell.n}.`
+      : `Tile ${cell.n} saved.`;
+  }catch(err){ hint.className="err"; hint.textContent = err?.code==="too_large" ? "That image is too large to upload." : (err?.message||String(err)); }
+}
+$("reliefBack").onclick=()=>openPanel("list");
+
+/* ---------- streets & trails (OpenStreetMap) ---------- */
+const OSM_Q = `[out:json][timeout:180];(way["highway"](around:4900,${CLAT},${CLON});way["railway"](around:4900,${CLAT},${CLON}););out tags geom;`;
+const OSM_SERVERS = [["Kumi Systems","https://overpass.kumi.systems/api/interpreter"],["Private.coffee","https://overpass.private.coffee/api/interpreter"],["VK Maps","https://maps.mail.ru/osm/tools/overpass/api/interpreter"],["Overpass main","https://overpass-api.de/api/interpreter"]];
+$("osmLinks").innerHTML = OSM_SERVERS.map(([n,u])=>`<a href="${esc(u+"?data="+encodeURIComponent(OSM_Q))}" target="_blank" rel="noopener">${esc(n)}</a>`).join(", ");
+$("osmTurbo").href = "https://overpass-turbo.eu/?Q="+encodeURIComponent(OSM_Q)+"&R";
+// width (m), minimum on-screen width (px), color token, how close the camera must be to show its name (km)
+const ROAD = {
+  service:{w:4, px:1.0, c:"--r-service", reach:0},
+  trail:{w:2.5, px:1.3, c:"--r-trail", reach:2.2},
+  rail:{w:4, px:1.6, c:"--r-rail", reach:3},
+  oldrail:{w:4, px:2.0, c:"--r-oldrail", reach:5.5},
+  local:{w:7, px:1.6, c:"--r-road", reach:2.4},
+  collector:{w:10, px:2.4, c:"--r-road", reach:4.5},
+  major:{w:14, px:3.2, c:"--r-major", reach:9},
+};
+const ROAD_KEYS = Object.keys(ROAD); // also the draw order inside the layer
+function roadClass(t){
+  const h=t.highway, r=t.railway;
+  if(r){ if(/abandoned|disused|razed|dismantled|construction/.test(r)) return "oldrail"; if(/^(rail|light_rail|narrow_gauge|tram|preserved)$/.test(r)) return "rail"; return null; }
+  if(!h) return null;
+  if(/^(motorway|trunk|primary)(_link)?$/.test(h)) return "major";
+  if(/^(secondary|tertiary)(_link)?$/.test(h)) return "collector";
+  if(/^(residential|unclassified|living_street|road)$/.test(h)) return "local";
+  if(h==="service") return /driveway|parking_aisle|drive-through/.test(t.service||"") ? null : "service";
+  if(/^(track|path|footway|bridleway|cycleway|steps|pedestrian)$/.test(h)) return "trail";
+  return null;
+}
+let streetData = null, streetDoc = null, loadedStreetsUrl = null, streetsOrder = {on:false};
+const STREET_VS = `
+attribute float side; attribute vec2 perp; attribute float widthKm; attribute float minPx; attribute vec3 rgb;
+uniform float uPxScale; uniform float uExtraPx;
+varying vec3 vColor;
+void main(){
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  float px = uPxScale * length(cameraPosition - wp.xyz);   // world units per screen pixel here
+  float w = max(widthKm, minPx * px) + uExtraPx * px;
+  wp.xz += perp * side * w * 0.5;
+  vColor = rgb;
+  gl_Position = projectionMatrix * viewMatrix * wp;
+  gl_Position.z -= 0.00004 * gl_Position.w;               // sit just above the terrain
+}`;
+const STREET_FS = `
+uniform float uOpacity; uniform float uCasing; uniform vec3 uCasingColor;
+varying vec3 vColor;
+void main(){ gl_FragColor = vec4(mix(vColor, uCasingColor, uCasing), uOpacity * (uCasing > 0.5 ? 0.5 : 1.0)); }`;
+function streetMaterial(casing){
+  return new THREE.ShaderMaterial({vertexShader:STREET_VS, fragmentShader:STREET_FS, transparent:true, depthWrite:false,
+    uniforms:{uPxScale:{value:0.001}, uExtraPx:{value:casing?1.6:0}, uOpacity:{value:1}, uCasing:{value:casing?1:0}, uCasingColor:{value:new THREE.Color(0x0f140f)}}});
+}
+const streetCasingMat = streetMaterial(true), streetFillMat = streetMaterial(false);
+const streetGeo = new THREE.BufferGeometry();
+const streetCasing = new THREE.Mesh(streetGeo, streetCasingMat), streetFill = new THREE.Mesh(streetGeo, streetFillMat);
+[streetCasing, streetFill].forEach(m=>{ m.visible=false; m.frustumCulled=false; scene.add(m); });
+let streetLabels = [];
+const streetLabelEl = document.createElement("div"); streetLabelEl.className="slabels"; $("labels").appendChild(streetLabelEl);
+
+// terrain height exactly as the mesh draws it (the polar grid), so roads hug the surface
+function meshY(x,z){
+  const r=Math.hypot(x,z)/RK*NR; let a=Math.atan2(z,x)/(2*Math.PI)*NS; if(a<0) a+=NS;
+  const ri=Math.min(Math.floor(r),NR-1), fr=Math.min(r-ri,1), a0=Math.floor(a), fa=a-a0, ai=a0%NS, aj=(ai+1)%NS;
+  const vy=(ring,seg)=> ring===0 ? pos[1] : pos[(1+(ring-1)*NS+seg)*3+1];
+  return (vy(ri,ai)*(1-fa)+vy(ri,aj)*fa)*(1-fr) + (vy(ri+1,ai)*(1-fa)+vy(ri+1,aj)*fa)*fr;
+}
+function buildStreets(){
+  streetLabels.forEach(l=>l.el.remove()); streetLabels=[];
+  if(!streetData){ streetGeo.setIndex(null); streetGeo.deleteAttribute("position"); syncStreets(); return; }
+  const P=[], SIDE=[], PERP=[], WID=[], MINPX=[], RGB=[], IDX=[];
+  const colors={}; ROAD_KEYS.forEach(k=>{ const c=new THREE.Color(cssVar(ROAD[k].c)||"#ffffff"); colors[k]=[c.r,c.g,c.b]; });
+  const LIFT=1.2/1000*EXAG, STEP=0.008, RMAX=RK*0.997;
+  const named=[]; // [name, cls, points]
+  for(const cls of ROAD_KEYS){
+    const st=ROAD[cls], col=colors[cls];
+    streetData.ways.forEach(w=>{
+      if(w.cls!==cls) return;
+      // to km, split where the way leaves the circle, and resample so the line follows the ground
+      let runs=[], cur=[];
+      for(let i=0;i<w.pts.length;i+=2){
+        const x=(w.pts[i+1]-CLON)*KX, z=(CLAT-w.pts[i])*KY, inside=Math.hypot(x,z)<=RMAX;
+        if(inside){
+          if(cur.length){ const [px,pz]=cur[cur.length-1], d=Math.hypot(x-px,z-pz), n=Math.ceil(d/STEP); for(let s=1;s<n;s++) cur.push([px+(x-px)*s/n, pz+(z-pz)*s/n]); }
+          cur.push([x,z]);
+        } else if(cur.length){ runs.push(cur); cur=[]; }
+      }
+      if(cur.length) runs.push(cur);
+      for(const run of runs){
+        if(run.length<2) continue;
+        const base=P.length/3;
+        for(let i=0;i<run.length;i++){
+          const a=run[Math.max(0,i-1)], b=run[Math.min(run.length-1,i+1)];
+          let tx=b[0]-a[0], tz=b[1]-a[1]; const tl=Math.hypot(tx,tz)||1; tx/=tl; tz/=tl;
+          const y=meshY(run[i][0],run[i][1])+LIFT;
+          for(const sd of [-1,1]){ P.push(run[i][0],y,run[i][1]); SIDE.push(sd); PERP.push(-tz,tx); WID.push(st.w/1000); MINPX.push(st.px); RGB.push(...col); }
+          if(i) { const q=base+(i-1)*2; IDX.push(q,q+1,q+2, q+1,q+3,q+2); }
+        }
+        if(w.name && st.reach) named.push([w.name, cls, run]);
+      }
+    });
+  }
+  streetGeo.dispose();
+  streetGeo.setAttribute("position",new THREE.Float32BufferAttribute(P,3));
+  streetGeo.setAttribute("side",new THREE.Float32BufferAttribute(SIDE,1));
+  streetGeo.setAttribute("perp",new THREE.Float32BufferAttribute(PERP,2));
+  streetGeo.setAttribute("widthKm",new THREE.Float32BufferAttribute(WID,1));
+  streetGeo.setAttribute("minPx",new THREE.Float32BufferAttribute(MINPX,1));
+  streetGeo.setAttribute("rgb",new THREE.Float32BufferAttribute(RGB,3));
+  streetGeo.setIndex(new THREE.BufferAttribute(new Uint32Array(IDX),1));
+  // name labels: along each named run, spaced by road type; skip repeats of the same name nearby
+  const placed={}, spacing={major:1.2, collector:1.0, local:0.7, trail:0.8, oldrail:0.9, rail:1.0};
+  for(const [name,cls,run] of named){
+    let len=0; for(let i=1;i<run.length;i++) len+=Math.hypot(run[i][0]-run[i-1][0], run[i][1]-run[i-1][1]);
+    if(len<0.12) continue;
+    const n=Math.max(1,Math.floor(len/spacing[cls]));
+    for(let j=0;j<n;j++){
+      let target=len*(j+0.5)/n, acc=0, pt=run[0];
+      for(let i=1;i<run.length;i++){ const d=Math.hypot(run[i][0]-run[i-1][0], run[i][1]-run[i-1][1]); if(acc+d>=target){ pt=run[i]; break; } acc+=d; }
+      const list=placed[name]||(placed[name]=[]);
+      if(list.some(q=>Math.hypot(q[0]-pt[0],q[1]-pt[1])<0.35)) continue;
+      list.push(pt);
+      const el=document.createElement("div"); el.className="slabel "+cls; el.textContent=name; el.style.display="none"; streetLabelEl.appendChild(el);
+      streetLabels.push({el, cls, w:new THREE.Vector3(pt[0], meshY(pt[0],pt[1])+0.004, pt[1]), reach:ROAD[cls].reach, rank:ROAD_KEYS.length-ROAD_KEYS.indexOf(cls), tw:name.length*6.3+10, shown:false});
+    }
+  }
+  streetLabels.sort((a,b)=>b.rank-a.rank);
+  syncStreets();
+}
+meshHooks.after.push(()=>{ if(streetData) buildStreets(); });
+function syncStreets(){
+  const on=!!streetData && !!streetsOrder.on && streetGeo.getAttribute("position");
+  streetCasing.visible=streetFill.visible=!!on;
+  if(on){
+    streetCasing.renderOrder=10+streetsOrder.k*3; streetFill.renderOrder=10+streetsOrder.k*3+1;
+    streetCasingMat.uniforms.uOpacity.value=streetFillMat.uniforms.uOpacity.value=streetsOrder.op;
+  }
+  streetLabelEl.hidden = !on || streetsOrder.op<0.3;
+}
+const _sv=new THREE.Vector3();
+function updateStreets(){ // per frame: keep line widths in screen pixels and place visible name labels without overlaps
+  if(!streetFill.visible) return;
+  const s=2*Math.tan(camera.fov*Math.PI/360)/Math.max(1,renderer.domElement.clientHeight);
+  streetCasingMat.uniforms.uPxScale.value=streetFillMat.uniforms.uPxScale.value=s;
+  if(streetLabelEl.hidden) return;
+  const W=renderer.domElement.clientWidth, H=renderer.domElement.clientHeight, boxes=[];
+  for(const L of streetLabels){
+    let show=false, x=0, y=0;
+    if(camera.position.distanceTo(L.w)<=L.reach && boxes.length<70){
+      _sv.copy(L.w).project(camera);
+      if(_sv.z<1 && Math.abs(_sv.x)<1.05 && Math.abs(_sv.y)<1.05){
+        x=(_sv.x+1)/2*W; y=(1-_sv.y)/2*H;
+        const b=[x-L.tw/2, y-9, x+L.tw/2, y+9];
+        if(!boxes.some(o=>b[0]<o[2]&&b[2]>o[0]&&b[1]<o[3]&&b[3]>o[1])){ boxes.push(b); show=true; }
+      }
+    }
+    if(show){ L.el.style.transform=`translate(${x}px,${y}px) translate(-50%,-50%)`; if(!L.shown){ L.el.style.display=""; L.shown=true; } }
+    else if(L.shown){ L.el.style.display="none"; L.shown=false; }
+  }
+}
+
+/* import: Overpass JSON or GeoJSON -> compact JSON asset */
+function decodeStreets(j){ // {v:1, names:[], ways:[[cls, nameIdx, lat0e6, lon0e6, dlat, dlon, ...]]}
+  const ways=j.ways.map(w=>{ const pts=[]; let la=0, lo=0; for(let i=2;i<w.length;i+=2){ la+=w[i]; lo+=w[i+1]; pts.push(la/1e6, lo/1e6); } return {cls:ROAD_KEYS[w[0]], name:w[1]>=0?j.names[w[1]]:"", pts}; });
+  return {ways, count:ways.length};
+}
+function encodeStreets(raw){
+  const names=[], nameIdx=new Map(), ways=[];
+  const lim=(RK+0.3)/KX, limLat=(RK+0.3)/KY;
+  for(const r of raw){
+    const cls=roadClass(r.tags||{}); if(!cls) continue;
+    if(!r.coords.some(([la,lo])=>Math.abs(la-CLAT)<limLat && Math.abs(lo-CLON)<lim)) continue;
+    const nm=(r.tags.name||r.tags.ref||"").trim();
+    let ni=-1; if(nm){ if(!nameIdx.has(nm)){ nameIdx.set(nm,names.length); names.push(nm); } ni=nameIdx.get(nm); }
+    const w=[ROAD_KEYS.indexOf(cls), ni]; let pa=0, po=0;
+    for(const [la,lo] of r.coords){ const A=Math.round(la*1e6), O=Math.round(lo*1e6); w.push(A-pa, O-po); pa=A; po=O; }
+    ways.push(w);
+  }
+  return {v:1, source:"OpenStreetMap", names, ways};
+}
+function readOsm(j){
+  const raw=[];
+  if(Array.isArray(j.elements)){
+    for(const el of j.elements) if(el.type==="way" && Array.isArray(el.geometry)) raw.push({tags:el.tags||{}, coords:el.geometry.filter(Boolean).map(p=>[p.lat,p.lon])});
+  } else if(j.type==="FeatureCollection"){
+    for(const f of j.features||[]){
+      const t=f.properties?.tags || f.properties || {}, g=f.geometry; if(!g) continue;
+      const lines = g.type==="LineString" ? [g.coordinates] : g.type==="MultiLineString" ? g.coordinates : g.type==="Polygon" ? g.coordinates : [];
+      lines.forEach(c=>raw.push({tags:t, coords:c.map(([lo,la])=>[la,lo])}));
+    }
+  } else throw new Error("That file isn’t OpenStreetMap data. Use the download link above and save the whole page.");
+  return raw;
+}
+const streetDrop=$("streetDrop");
+["dragenter","dragover"].forEach(t=>streetDrop.addEventListener(t,e=>{e.preventDefault();streetDrop.classList.add("over");}));
+["dragleave","drop"].forEach(t=>streetDrop.addEventListener(t,e=>{e.preventDefault();streetDrop.classList.remove("over");}));
+streetDrop.addEventListener("drop",e=>{ const f=e.dataTransfer.files[0]; if(f) importStreets(f); });
+$("fStreets").onchange=e=>{ const f=e.target.files[0]; if(f) importStreets(f); };
+$("streetsBack").onclick=()=>openPanel("list");
+async function importStreets(file){
+  const hint=$("streetHint"); hint.className="hint";
+  try{
+    if(!db||!assets) throw new Error("Adding street data needs edit access to this page while signed in.");
+    hint.textContent="Reading the file…";
+    let j; try{ j=JSON.parse(await file.text()); }catch(e){ throw new Error("That file isn’t readable JSON. Save the whole page from the download link and try again."); }
+    if(j.remark && !j.elements?.length) throw new Error("OpenStreetMap was busy and sent no data. Open the download link again in a minute.");
+    const packed=encodeStreets(readOsm(j));
+    if(!packed.ways.length) throw new Error("No streets or trails in that file fall inside the 3-mile circle.");
+    hint.textContent="Saving…";
+    const up=await assets.upload(new Blob([JSON.stringify(packed)],{type:"application/json"}),{type:"application/json"});
+    const old=streetDoc?.id;
+    loadedStreetsUrl=up.url; streetData=decodeStreets(packed);
+    await db.doc("settings/streets").set({id:up.id, url:up.url, ways:packed.ways.length, source:"OpenStreetMap", updatedAt:new Date().toISOString()});
+    if(old && old!==up.id) assets.delete(old).catch(()=>{});
+    setLayer("streets",{on:true}); buildStreets(); applyLayer();
+    hint.className="hint ok"; hint.textContent=`Added ${packed.ways.length.toLocaleString()} streets, trails and rail lines.`;
+  }catch(err){ hint.className="err"; hint.textContent = err?.code==="too_large" ? "The street data is too large to save." : (err?.message||String(err)); }
+}
+async function loadStreets(d){
+  streetDoc=d;
+  if(!d?.url){ loadedStreetsUrl=null; if(streetData){ streetData=null; buildStreets(); applyLayer(); } return; }
+  if(d.url===loadedStreetsUrl && streetData) return;
+  loadedStreetsUrl=d.url;
+  try{
+    const j=await (await fetch(d.url)).json();
+    if(loadedStreetsUrl!==d.url) return;
+    streetData=decodeStreets(j); buildStreets(); applyLayer();
+  }catch(e){ loadedStreetsUrl=null; }
+}
+async function removeStreets(){ const id=streetDoc?.id; await db.doc("settings/streets").delete(); if(id && assets) assets.delete(id).catch(()=>{}); }
+
+/* ---------- theme ---------- */
+function onTheme(){ paintTerrain(); applyLayer(); syncSelection3D(); }
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",onTheme);
+new MutationObserver(onTheme).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+
+/* ---------- hosted version: Firebase for finds, bundled files for map layers ---------- */
+document.documentElement.classList.add("hosted");
+let auth = null, me = null, unlocked = false, isOwnerUser = false;
+const photoCache = new Map();
+const uid = () => me?.uid || null;
+const canWrite = () => !!me && (unlocked || isOwnerUser);
+const canEdit = f => isOwnerUser || (unlocked && !!f && f.createdBy===uid());
+
+// Photos live in Firestore (one document each, under its 1 MB limit) so the project can stay on Firebase's free plan.
+function blobToDataURL(b){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(b); }); }
+async function jpegUnder(bmp, maxSide, maxBytes){
+  for(const [side,q] of [[maxSide,0.85],[maxSide,0.75],[Math.round(maxSide*0.8),0.75],[Math.round(maxSide*0.65),0.72],[Math.round(maxSide*0.5),0.7]]){
+    const s=Math.min(1, side/Math.max(bmp.width,bmp.height)), c=document.createElement("canvas");
+    c.width=Math.round(bmp.width*s); c.height=Math.round(bmp.height*s); c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+    const b=await new Promise(r=>c.toBlob(r,"image/jpeg",q));
+    if(b.size<=maxBytes) return b;
+  }
+  throw new Error("That photo couldn’t be made small enough to save. Try a smaller one.");
+}
+const photoStore = {
+  async upload(blob){
+    const bmp=await createImageBitmap(blob);
+    const full=await blobToDataURL(await jpegUnder(bmp, 1600, 680*1024));
+    const thumb=await blobToDataURL(await jpegUnder(bmp, 160, 12*1024));
+    const ref=db.collection("photos").doc();
+    await ref.set({data:full, createdBy:uid(), createdAt:new Date().toISOString()});
+    photoCache.set(ref.id, full);
+    return {id:ref.id, url:"photo:"+ref.id, thumb};
+  },
+  async delete(id){ await db.doc("photos/"+id).delete(); photoCache.delete(id); },
+};
+async function photoData(id){
+  if(photoCache.has(id)) return photoCache.get(id);
+  const d=await db.doc("photos/"+id).get(); const v=d.exists ? d.data().data : null;
+  if(v) photoCache.set(id,v); return v;
+}
+function fillPhotos(root){ // swap in full photos for <img data-photo="id">
+  root.querySelectorAll("img[data-photo]").forEach(img=>{ const id=img.dataset.photo; img.removeAttribute("data-photo"); photoData(id).then(v=>{ if(v) img.src=v; }).catch(()=>{}); });
+}
+
+/* passcode unlock + owner sign-in */
+function renderAuth(){
+  const line=$("authLine");
+  if(isOwnerUser) line.innerHTML=`Signed in as the owner (${esc(me.email||"")}). <button class="linkbtn" type="button" id="signOut">Sign out</button>`;
+  else if(unlocked) line.innerHTML=`You can add finds on this device. <button class="linkbtn" type="button" id="signOut">Lock</button>`;
+  else line.innerHTML=`<button class="linkbtn" type="button" id="ownerIn">Owner sign-in</button>`;
+  $("signOut")&&($("signOut").onclick=()=>auth.signOut());
+  $("ownerIn")&&($("ownerIn").onclick=async()=>{ try{ await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }catch(e){ alertErr("Sign-in didn’t finish: "+(e.message||e)); } });
+  render();
+}
+$("addBtn").onclick=()=>{
+  if(!db){ alertErr("Finds can’t be saved because the database isn’t set up yet. See README.md."); return; }
+  if(canWrite()) openForm(); else { $("unlockForm").hidden=false; $("passcode").focus(); }
+};
+$("unlockForm").onsubmit=async e=>{
+  e.preventDefault();
+  const code=$("passcode").value.trim(), msg=$("unlockMsg"); if(!code) return;
+  msg.className="hint"; msg.textContent="Checking…";
+  try{
+    if(!me) await auth.signInAnonymously();
+    await db.doc("unlocked/"+uid()).set({code, at:new Date().toISOString()});
+    unlocked=true; $("unlockForm").hidden=true; $("passcode").value=""; renderAuth(); openForm();
+  }catch(err){
+    msg.className="err";
+    msg.textContent = err?.code==="permission-denied" ? "That passcode isn’t right." : "Couldn’t check the passcode: "+(err?.message||err);
+  }
+};
+
+/* boot */
+function fakeSnap(obj){ return {docs:Object.entries(obj||{}).map(([id,data])=>({id, exists:true, data:()=>data}))}; }
+onTheme(); render(); requestAnimationFrame(frame);
+(async()=>{
+  // map layers ship with the site as plain files
+  try{
+    const man=await (await fetch("data/manifest.json")).json();
+    basemap=man.basemap||null;
+    layers=(man.layers||[]).map(l=>({...l, kind:"historical"}));
+    onTileDocs(TILESETS.satellite, fakeSnap(man.satTiles));
+    onTileDocs(TILESETS.relief, fakeSnap(man.reliefTiles));
+    if(man.elevation) loadElevation(man.elevation);
+    if(man.streets) loadStreets(man.streets);
+    applyLayer();
+  }catch(e){ alertErr("The map layers couldn’t be loaded. Check that the data folder was uploaded with the page."); }
+  // finds live in Firebase
+  const cfg=window.FIREBASE_CONFIG;
+  if(!window.firebase || !cfg || !cfg.apiKey || /PASTE/.test(cfg.apiKey)){ $("status").textContent="Finds aren’t connected yet: add your Firebase settings to config.js (see README.md)."; render(); return; }
+  try{
+    firebase.initializeApp(cfg);
+    db=firebase.firestore(); auth=firebase.auth(); assets=photoStore;
+  }catch(e){ $("status").textContent="Couldn’t start Firebase: "+(e.message||e); return; }
+  $("status").textContent="";
+  auth.onAuthStateChanged(async u=>{
+    me=u; unlocked=false; isOwnerUser=!!u && !u.isAnonymous;
+    if(u && u.isAnonymous){ try{ unlocked=(await db.doc("unlocked/"+u.uid).get()).exists; }catch(e){} }
+    renderAuth(); renderDetail();
+  });
+  db.collection("finds").onSnapshot(snap=>{
+    finds=snap.docs.map(d=>({id:d.id,...d.data()})).map(f=>({...f, lat:f.lat==null||f.lat===""?null:+f.lat, lon:f.lon==null||f.lon===""?null:+f.lon}));
+    if(selected&&!finds.some(f=>f.id===selected)) selected=null;
+    render();
+  },e=>{ $("status").textContent="Couldn’t load finds ("+e.code+"). Check the Firestore rules (README.md)."; });
+})();
+
+</script>
+
+</body>
+</html>
