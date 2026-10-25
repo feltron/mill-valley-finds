@@ -610,7 +610,7 @@ const DEFAULT_CATS = ["Coin","Bottle","Button","Jewelry","Tool","Hardware","Toy"
 const EXTRA = ["#7FE0B0","#FFB3D1","#FFD98A","#8FD3FF","#D3A6FF"];
 function catColor(c){ const k=String(c||"other").trim().toLowerCase(); if(CAT_COLORS[k]) return CAT_COLORS[k]; let h=0; for(const ch of k) h=(h*31+ch.charCodeAt(0))>>>0; return EXTRA[h%EXTRA.length]; }
 function catLabel(c){ c=String(c||"Other").trim(); return c ? c[0].toUpperCase()+c.slice(1) : "Other"; }
-function ageYear(s){ if(!s) return null; const m=String(s).match(/(\d{4})(s)?/); if(!m) return null; return +m[1]+(m[2]?5:0); }
+function ageYear(s){ if(!s) return null; const m=String(s).match(/(\d{3,4})(s)?/); if(!m) return null; return +m[1]+(m[2]?5:0); }
 function fmtDate(d){ if(!d) return "—"; const t=new Date(d+"T12:00:00"); return isNaN(t)?esc(d):t.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}); }
 const fmtNum = n => n==null ? "—" : n.toLocaleString();
 
@@ -904,17 +904,25 @@ $("list").onclick=e=>{ const li=e.target.closest(".item"); if(li) select(li.data
 $("list").onkeydown=e=>{ if(e.key==="Enter"){ const li=e.target.closest(".item"); if(li) select(li.dataset.id);} };
 
 /* ---------- timeline ---------- */
+const TL_PRE = 1500; // anything older sits in one "Pre-1500" slot at the left
 function renderTimeline(){
   const svg=$("tl"), W=svg.clientWidth||600, H=58, pad=14;
   const pts=visibleFinds().map(f=>({f,y:ageYear(f.age)})).filter(p=>p.y!=null);
-  const MY=mapYears();
-  const minY=Math.min(1850,...pts.map(p=>p.y),...MY), maxY=2030, x=y=>pad+(y-minY)/(maxY-minY)*(W-2*pad);
+  const MY=mapYears().filter(y=>y>=TL_PRE), hasPre=pts.some(p=>p.y<TL_PRE);
+  const minY=Math.min(1850,...pts.map(p=>p.y).filter(y=>y>=TL_PRE),...MY), maxY=2030;
+  const preW=hasPre?74:0, x0=pad+preW, x1=W-pad, x=y=>y<TL_PRE ? pad+preW/2-8 : x0+(y-minY)/(maxY-minY)*(x1-x0);
   $("tlRange").textContent=pts.length?`${pts.length} dated · ${Math.min(...pts.map(p=>p.y))}–${Math.max(...pts.map(p=>p.y))}`:"Add an estimated age to place a find here";
-  let out=`<line x1="${pad}" x2="${W-pad}" y1="40" y2="40" stroke="var(--line)"/>`;
-  const step=(maxY-minY)>150?25:10;
+  let out=`<line x1="${x0}" x2="${x1}" y1="40" y2="40" stroke="var(--line)"/>`;
+  if(hasPre){ const c=pad+preW/2-8;
+    out+=`<line x1="${pad}" x2="${pad+preW-26}" y1="40" y2="40" stroke="var(--line)"/><text x="${c}" y="55" text-anchor="middle">Pre-${TL_PRE}</text>`
+      +`<path d="M${pad+preW-20} 44 l5 -8 M${pad+preW-14} 44 l5 -8" stroke="var(--muted)" fill="none"/>`; }
+  // pick a tick spacing that leaves room for each label at this width
+  const span=maxY-minY, room=x1-x0, step=[5,10,25,50,100,250].find(st=>room/(span/st)>=44)||250;
   for(let y=Math.ceil(minY/step)*step;y<=maxY;y+=step){ const X=x(y); out+=`<line x1="${X}" x2="${X}" y1="37" y2="43" stroke="var(--muted)"/><text x="${X}" y="55" text-anchor="middle">${y}</text>`; }
   for(const LY of MY){ const X=x(LY), end=X>W-70; out+=`<line x1="${X}" x2="${X}" y1="4" y2="43" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="3 3"/><text x="${end?X-5:X+5}" y="10" text-anchor="${end?"end":"start"}" style="fill:var(--accent);font-weight:500">Map · ${LY}</text>`; }
-  const stacks={}; pts.sort((a,b)=>a.y-b.y).forEach(p=>{ const X=x(p.y), b=Math.round(X/11); stacks[b]=(stacks[b]||0)+1; const cy=33-(stacks[b]-1)*11;
+  // stack dots that land together, three high, then nudge sideways
+  const stacks={}; pts.sort((a,b)=>a.y-b.y).forEach(p=>{ const X0=x(p.y), bin=Math.round(X0/11), n=stacks[bin]=(stacks[bin]||0)+1;
+    const cy=33-Math.min(n-1,2)*11, X=X0+(n>3?(n-3)*4:0);
     out+=`<circle class="tl-dot${p.f.id===selected?" sel":""}" data-id="${esc(p.f.id)}" cx="${X}" cy="${cy}" r="5" fill="${catColor(p.f.category)}"><title>${esc(p.f.name)} · ${esc(p.f.age)}</title></circle>`; });
   svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.innerHTML=out;
 }
