@@ -890,7 +890,14 @@ function render(){
   if(!finds.length && db) $("list").innerHTML=`<li class="empty"><b>No finds logged yet</b>Tap “Log a find”, add a photo, and pick the spot on the map.</li>`;
   buildMarkers(); renderTimeline(); renderDetail();
 }
-$("chips").onclick=e=>{ const b=e.target.closest(".chip"); if(!b) return; const k=b.dataset.cat; hidden.has(k)?hidden.delete(k):hidden.add(k); render(); };
+// click a category to show only it; click it again to show all. ⌘/Ctrl/Shift-click adds or removes one category.
+$("chips").onclick=e=>{
+  const b=e.target.closest(".chip"); if(!b) return; const k=b.dataset.cat;
+  const all=[...$("chips").querySelectorAll(".chip")].map(c=>c.dataset.cat);
+  if(e.metaKey||e.ctrlKey||e.shiftKey){ hidden.has(k)?hidden.delete(k):hidden.add(k); if(hidden.size===all.length) hidden.clear(); }
+  else { const soloed = !hidden.has(k) && all.every(c=>c===k || hidden.has(c)); hidden = soloed ? new Set() : new Set(all.filter(c=>c!==k)); }
+  render();
+};
 $("people").onchange=e=>{ personFilter=e.target.value; render(); };
 $("sort").onchange=render;
 $("list").onclick=e=>{ const li=e.target.closest(".item"); if(li) select(li.dataset.id); };
