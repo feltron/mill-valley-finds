@@ -124,6 +124,16 @@ button,input,select,textarea{font:inherit;color:inherit}
 .chip.pchip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .chip.pchip[aria-pressed="true"] em{color:var(--bg);opacity:.75}
 .kv a{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+.detail .ph{cursor:zoom-in}
+.lightbox{position:fixed;inset:0;z-index:50;background:rgba(9,11,10,.95);display:grid;grid-template:minmax(0,1fr)/minmax(0,1fr);place-items:center;padding:max(56px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(44px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.lightbox img{max-width:100%;max-height:100%;object-fit:contain;display:block;touch-action:pinch-zoom;user-select:none}
+.lbx{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;font-size:22px;line-height:1;cursor:pointer}
+.lbnav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:64px;border:0;border-radius:8px;background:rgba(255,255,255,.12);color:#fff;font-size:30px;line-height:1;cursor:pointer}
+.lbnav.prev{left:calc(10px + env(safe-area-inset-left,0px))}
+.lbnav.next{right:calc(10px + env(safe-area-inset-right,0px))}
+.lbx:hover,.lbnav:hover{background:rgba(255,255,255,.24)}
+.lbx:focus-visible,.lbnav:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.lbcount{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);color:#fff;opacity:.8;font:500 12px var(--f-data)}
 .elevbox{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:12px}
 .elevbox .note{margin:0}
 .step{margin:0;font:600 11px/1.2 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
@@ -553,6 +563,14 @@ form{display:grid;gap:14px}
   </aside>
 </div>
 
+<div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Photo viewer">
+  <img id="lbImg" alt="">
+  <button class="lbx" type="button" id="lbClose" aria-label="Close photo">×</button>
+  <button class="lbnav prev" type="button" id="lbPrev" aria-label="Previous photo">‹</button>
+  <button class="lbnav next" type="button" id="lbNext" aria-label="Next photo">›</button>
+  <span class="lbcount" id="lbCount"></span>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -942,7 +960,7 @@ function renderDetail(){
   const el=$("detail"), f=finds.find(f=>f.id===selected);
   if(!f){ el.hidden=true; return; }
   const e=elevFt(f.lat,f.lon), hasLoc=f.lat!=null&&f.lon!=null;
-  const ph=photosOf(f);
+  const ph=photosOf(f); detailIdx=0;
   el.innerHTML=`<button class="closex" type="button" id="dClose" aria-label="Close">×</button>
     ${ph.length?photoImg(ph[0],"ph",f.name):`<div class="noph"><div><i style="background:${catColor(f.category)}"></i>No photo</div></div>`}
     ${ph.length>1?`<div class="pstrip">${ph.map((p,i)=>`<button type="button" class="pthumb${i?"":" on"}" data-i="${i}" aria-label="Photo ${i+1} of ${ph.length}">${thumbSrc(p)?`<img src="${esc(thumbSrc(p))}" alt="">`:""}</button>`).join("")}</div>`:""}
@@ -966,7 +984,7 @@ function renderDetail(){
   el.querySelectorAll(".pthumb").forEach(b=>b.onclick=()=>{
     const t=document.createElement("div"); t.innerHTML=photoImg(ph[+b.dataset.i],"ph",f.name);
     el.querySelector(".ph").replaceWith(t.firstElementChild); fillPhotos(el);
-    el.querySelectorAll(".pthumb").forEach(x=>x.classList.toggle("on",x===b));
+    el.querySelectorAll(".pthumb").forEach(x=>x.classList.toggle("on",x===b)); detailIdx=+b.dataset.i;
   });
   $("dClose").onclick=()=>select(null);
   if($("dEdit")) $("dEdit").onclick=()=>openForm(f);
@@ -974,6 +992,26 @@ function renderDetail(){
   if($("dNo")) $("dNo").onclick=()=>{confirmDel=false;renderDetail();};
   if($("dYes")) $("dYes").onclick=async()=>{ try{ await db.doc("finds/"+f.id).delete(); if(assets) photosOf(f).forEach(p=>p.id&&assets.delete(p.id).catch(()=>{})); select(null);}catch(err){ alertErr("Couldn’t delete: "+(err?.message||err)); } };
 }
+/* full-screen photo viewer */
+let detailIdx=0, lb={list:[], i:0}, lbTouch=null;
+const loadFull = id => typeof photoData==="function" ? photoData(id) : Promise.resolve(null); // the hosted site keeps full photos in its database
+function openLightbox(list, i){ if(!list.length) return; lb={list, i}; $("lightbox").hidden=false; showLb(); $("lbClose").focus(); }
+function showLb(){
+  const p=lb.list[lb.i], img=$("lbImg"), many=lb.list.length>1;
+  img.alt=`Photo ${lb.i+1} of ${lb.list.length}`;
+  if(isRefUrl(p.url)){ img.src=p.thumb||""; loadFull(p.url.slice(6)).then(v=>{ if(v && lb.list[lb.i]===p) img.src=v; }).catch(()=>{}); }
+  else img.src=p.url;
+  $("lbPrev").hidden=$("lbNext").hidden=!many; $("lbCount").textContent=many?`${lb.i+1} / ${lb.list.length}`:"";
+}
+function stepLb(d){ lb.i=(lb.i+d+lb.list.length)%lb.list.length; showLb(); }
+function closeLb(){ $("lightbox").hidden=true; $("lbImg").removeAttribute("src"); document.querySelector("#detail .ph")?.focus?.(); }
+$("detail").addEventListener("click",e=>{ if(!e.target.closest(".ph")) return; const f=finds.find(x=>x.id===selected); if(f) openLightbox(photosOf(f), detailIdx); });
+$("lbClose").onclick=closeLb; $("lbPrev").onclick=()=>stepLb(-1); $("lbNext").onclick=()=>stepLb(1);
+$("lightbox").addEventListener("click",e=>{ if(e.target.id==="lightbox") closeLb(); });
+document.addEventListener("keydown",e=>{ if($("lightbox").hidden) return;
+  if(e.key==="Escape") closeLb(); else if(e.key==="ArrowLeft") stepLb(-1); else if(e.key==="ArrowRight") stepLb(1); else return; e.preventDefault(); });
+$("lightbox").addEventListener("touchstart",e=>{ lbTouch = e.touches.length===1 ? e.touches[0].clientX : null; },{passive:true});
+$("lightbox").addEventListener("touchend",e=>{ if(lbTouch==null || lb.list.length<2 || (window.visualViewport?.scale||1)>1.05) return; const dx=e.changedTouches[0].clientX-lbTouch; lbTouch=null; if(Math.abs(dx)>50) stepLb(dx<0?1:-1); });
 function alertErr(msg){ $("status").textContent=msg; }
 
 /* ---------- form ---------- */
