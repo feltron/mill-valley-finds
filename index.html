@@ -102,6 +102,28 @@ button,input,select,textarea{font:inherit;color:inherit}
 .slabel.trail{color:var(--sl-trail);font-style:italic;font-weight:500}
 .slabel.oldrail{color:var(--sl-oldrail);font-style:italic}
 #lbName{display:block}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px}
+.pgrid:empty{display:none}
+.pgrid:not(:empty)+.drop{min-height:56px}
+.pitem{position:relative;aspect-ratio:1;max-width:100%;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:var(--bg)}
+.pitem img{width:100%;height:100%;object-fit:cover;display:block}
+.prm{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:15px;line-height:1}
+.pcover,.pcov{position:absolute;left:4px;bottom:4px;font:600 9px/1 var(--f-body);letter-spacing:.06em;text-transform:uppercase;padding:4px 5px;border-radius:3px;border:0}
+.pcover{background:var(--accent);color:var(--accent-ink)}
+.pcov{background:rgba(0,0,0,.6);color:#fff;cursor:pointer;opacity:0;transition:opacity .15s}
+.pitem:hover .pcov,.pcov:focus-visible{opacity:1}
+@media (pointer:coarse){.pcov{opacity:1}}
+.pstrip{display:flex;gap:4px;padding:6px 8px 0;overflow-x:auto}
+.pthumb{flex:0 0 52px;height:52px;padding:0;border:2px solid transparent;border-radius:5px;overflow:hidden;cursor:pointer;background:var(--bg)}
+.pthumb.on{border-color:var(--accent)}
+.pthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.people{align-items:center}
+.people:empty{display:none}
+.plabel{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-right:2px}
+.chips .chip.pchip{opacity:1}
+.chip.pchip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip.pchip[aria-pressed="true"] em{color:var(--bg);opacity:.75}
+.kv a{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:2px}
 .elevbox{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:12px}
 .elevbox .note{margin:0}
 .step{margin:0;font:600 11px/1.2 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
@@ -428,6 +450,7 @@ form{display:grid;gap:14px}
         <div class="stat"><b id="sHigh">—</b><span>Highest ft</span></div>
       </div>
       <div class="chips" id="chips"></div>
+      <div class="chips people" id="people"></div>
       <div class="listbar">
         <h3 class="section-h">Finds</h3>
         <label class="row note">Sort
@@ -456,11 +479,11 @@ form{display:grid;gap:14px}
       </div>
       <form id="form" novalidate>
         <div class="field">
-          <span class="lbl">Photo</span>
+          <span class="lbl">Photos</span>
+          <div class="pgrid" id="pgrid"></div>
           <div class="drop" id="drop">
-            <span id="dropText">Drop a photo or tap to choose.<br>Location and date are read from the photo when it has them.</span>
-            <img id="dropImg" alt="" hidden>
-            <input type="file" id="fPhoto" accept="image/*" aria-label="Photo of the item">
+            <span id="dropText"></span>
+            <input type="file" id="fPhoto" accept="image/*" multiple aria-label="Photos of the item">
           </div>
           <span class="hint" id="photoHint"></span>
         </div>
@@ -479,9 +502,16 @@ form{display:grid;gap:14px}
           <label for="fName">Item name</label>
           <input id="fName" placeholder="Barber dime" required>
         </div>
-        <div class="field">
-          <label for="fDate">Date found</label>
-          <input id="fDate" type="date">
+        <div class="two">
+          <div class="field">
+            <label for="fFinder">Found by</label>
+            <input id="fFinder" list="finderList" placeholder="Name" autocomplete="off">
+            <datalist id="finderList"></datalist>
+          </div>
+          <div class="field">
+            <label for="fDate">Date found</label>
+            <input id="fDate" type="date">
+          </div>
         </div>
         <div class="field">
           <span class="lbl">Where it was found</span>
@@ -497,6 +527,10 @@ form{display:grid;gap:14px}
         <div class="field">
           <label for="fNotes">Notes</label>
           <textarea id="fNotes" placeholder="Depth, signal, condition, who was with you…"></textarea>
+        </div>
+        <div class="field">
+          <label for="fLink">Reference link</label>
+          <input id="fLink" type="url" inputmode="url" autocomplete="off" placeholder="https://… a catalog page, auction record or museum entry">
         </div>
         <p class="err" id="formErr" hidden></p>
         <div class="row">
@@ -795,7 +829,17 @@ function stopPick(){ picking=false; mapEl.classList.remove("picking"); $("pickBa
 $("pickBtn").onclick=startPick; $("pickCancel").onclick=stopPick;
 
 /* ---------- list / stats / chips ---------- */
-function visibleFinds(){ return finds.filter(f=>!hidden.has(catLabel(f.category).toLowerCase())); }
+let personFilter = ""; // "" = everyone
+const finderOf = f => String(f?.finder||"").trim();
+function visibleFinds(){ return finds.filter(f=>!hidden.has(catLabel(f.category).toLowerCase()) && (!personFilter || finderOf(f)===personFilter)); }
+// photos: a list per find; older finds kept a single photo in photoUrl/photoId/thumb
+const MAX_PHOTOS = 8;
+function photosOf(f){ if(Array.isArray(f?.photos) && f.photos.length) return f.photos; return f?.photoUrl ? [{id:f.photoId||"", url:f.photoUrl, thumb:f.thumb||""}] : []; }
+const isRefUrl = u => String(u||"").startsWith("photo:");
+function thumbSrc(p){ return p ? (p.thumb || (isRefUrl(p.url) ? "" : p.url)) : ""; }
+function photoImg(p, cls, alt=""){ return isRefUrl(p.url) ? `<img class="${cls}" src="${esc(p.thumb||"")}" data-photo="${esc(p.url.slice(6))}" alt="${esc(alt)}">` : `<img class="${cls}" src="${esc(p.url)}" alt="${esc(alt)}">`; }
+const safeLink = u => /^https?:\/\/[^\s]+$/i.test(String(u||""));
+function linkLabel(u){ try{ const x=new URL(u); const p=x.pathname.length>1 ? x.pathname.replace(/\/$/,"") : ""; const t=x.hostname.replace(/^www\./,"")+p; return t.length>42 ? t.slice(0,40)+"…" : t; }catch(e){ return u; } }
 function sorted(arr){
   const s=$("sort").value, a=[...arr];
   if(s==="found") a.sort((x,y)=>String(y.foundOn||"").localeCompare(String(x.foundOn||"")));
@@ -804,7 +848,7 @@ function sorted(arr){
   if(s==="elev") a.sort((x,y)=>(elevFt(y.lat,y.lon)??-1)-(elevFt(x.lat,x.lon)??-1));
   return a;
 }
-function thumbHTML(f,cls="thumb"){ const src=f.thumb||(f.photoUrl&&!String(f.photoUrl).startsWith("photo:")?f.photoUrl:""); return src ? `<img class="${cls}" src="${esc(src)}" alt="" loading="lazy">` : `<span class="${cls}"><i style="background:${catColor(f.category)}"></i></span>`; }
+function thumbHTML(f,cls="thumb"){ const src=thumbSrc(photosOf(f)[0]); return src ? `<img class="${cls}" src="${esc(src)}" alt="" loading="lazy">` : `<span class="${cls}"><i style="background:${catColor(f.category)}"></i></span>`; }
 function render(){
   // stats
   $("sCount").textContent=finds.length;
@@ -816,17 +860,25 @@ function render(){
   const counts={}; finds.forEach(f=>{const c=catLabel(f.category); counts[c]=(counts[c]||0)+1;});
   $("chips").innerHTML=Object.keys(counts).sort().map(c=>`<button class="chip" type="button" data-cat="${esc(c.toLowerCase())}" aria-pressed="${!hidden.has(c.toLowerCase())}"><i style="background:${catColor(c)}"></i>${esc(c)} <em>${counts[c]}</em></button>`).join("");
   $("catList").innerHTML=[...new Set([...DEFAULT_CATS,...Object.keys(counts)])].map(c=>`<option value="${esc(c)}">`).join("");
+  // people
+  const people={}; finds.forEach(f=>{ const p=finderOf(f); if(p) people[p]=(people[p]||0)+1; });
+  const names=Object.keys(people).sort((a,b)=>a.localeCompare(b));
+  if(personFilter && !people[personFilter]) personFilter="";
+  $("people").innerHTML = names.length ? `<span class="plabel">Found by</span>` + [["","Everyone",finds.length], ...names.map(n=>[n,n,people[n]])]
+    .map(([k,label,c])=>`<button class="chip pchip" type="button" data-person="${esc(k)}" aria-pressed="${personFilter===k}">${esc(label)} <em>${c}</em></button>`).join("") : "";
+  $("finderList").innerHTML=names.map(n=>`<option value="${esc(n)}">`).join("");
   // list
   const vis=sorted(visibleFinds());
   $("list").innerHTML=vis.map(f=>{
     const e=elevFt(f.lat,f.lon);
     return `<li class="item${f.id===selected?" sel":""}" data-id="${esc(f.id)}" tabindex="0">${thumbHTML(f)}
-      <div class="item-t"><b>${esc(f.name||"Untitled find")}${f.example?'<span class="tag">Example</span>':""}</b><span>${esc(catLabel(f.category))}${f.age?" · "+esc(f.age):""}</span></div>
+      <div class="item-t"><b>${esc(f.name||"Untitled find")}${f.example?'<span class="tag">Example</span>':""}</b><span>${esc(catLabel(f.category))}${f.age?" · "+esc(f.age):""}${finderOf(f)?" · "+esc(finderOf(f)):""}</span></div>
       <div class="item-m">${f.foundOn?esc(f.foundOn):"—"}<br>${e==null?"outside circle":fmtNum(e)+" ft"}</div></li>`;}).join("");
   if(!finds.length && db) $("list").innerHTML=`<li class="empty"><b>No finds logged yet</b>Tap “Log a find”, add a photo, and pick the spot on the map.</li>`;
   buildMarkers(); renderTimeline(); renderDetail();
 }
 $("chips").onclick=e=>{ const b=e.target.closest(".chip"); if(!b) return; const k=b.dataset.cat; hidden.has(k)?hidden.delete(k):hidden.add(k); render(); };
+$("people").onclick=e=>{ const b=e.target.closest(".pchip"); if(!b) return; personFilter=b.dataset.person; render(); };
 $("sort").onchange=render;
 $("list").onclick=e=>{ const li=e.target.closest(".item"); if(li) select(li.dataset.id); };
 $("list").onkeydown=e=>{ if(e.key==="Enter"){ const li=e.target.closest(".item"); if(li) select(li.dataset.id);} };
@@ -862,42 +914,64 @@ function renderDetail(){
   const el=$("detail"), f=finds.find(f=>f.id===selected);
   if(!f){ el.hidden=true; return; }
   const e=elevFt(f.lat,f.lon), hasLoc=f.lat!=null&&f.lon!=null;
+  const ph=photosOf(f);
   el.innerHTML=`<button class="closex" type="button" id="dClose" aria-label="Close">×</button>
-    ${f.photoUrl?`<img class="ph" ${String(f.photoUrl).startsWith("photo:")?`src="${esc(f.thumb||"")}" data-photo="${esc(f.photoUrl.slice(6))}"`:`src="${esc(f.photoUrl)}"`} alt="${esc(f.name)}">`:`<div class="noph"><div><i style="background:${catColor(f.category)}"></i>No photo</div></div>`}
+    ${ph.length?photoImg(ph[0],"ph",f.name):`<div class="noph"><div><i style="background:${catColor(f.category)}"></i>No photo</div></div>`}
+    ${ph.length>1?`<div class="pstrip">${ph.map((p,i)=>`<button type="button" class="pthumb${i?"":" on"}" data-i="${i}" aria-label="Photo ${i+1} of ${ph.length}">${thumbSrc(p)?`<img src="${esc(thumbSrc(p))}" alt="">`:""}</button>`).join("")}</div>`:""}
     <div class="body">
       <div><span class="chip" style="cursor:default"><i style="background:${catColor(f.category)}"></i>${esc(catLabel(f.category))}</span>${f.example?'<span class="tag">Example</span>':""}</div>
       <h2>${esc(f.name||"Untitled find")}</h2>
       <dl class="kv">
         <dt>Est. age</dt><dd>${esc(f.age||"—")}</dd>
         <dt>Found</dt><dd>${fmtDate(f.foundOn)}</dd>
+        ${finderOf(f)?`<dt>Found by</dt><dd>${esc(finderOf(f))}</dd>`:""}
         <dt>Location</dt><dd class="mono">${hasLoc?`${(+f.lat).toFixed(5)}, ${(+f.lon).toFixed(5)}`:"—"}</dd>
         <dt>Elevation</dt><dd class="mono">${e==null?(hasLoc?"Outside the 3-mile circle":"—"):fmtNum(e)+" ft"}</dd>
         ${f.notes?`<dt>Notes</dt><dd style="white-space:pre-wrap">${esc(f.notes)}</dd>`:""}
+        ${safeLink(f.link)?`<dt>Reference</dt><dd><a href="${esc(f.link)}" target="_blank" rel="noopener">${esc(linkLabel(f.link))} ↗</a></dd>`:""}
       </dl>
       ${confirmDel?`<div class="confirm">Delete “${esc(f.name||"this find")}” and its photo? This can’t be undone.<div class="row"><button class="btn danger" id="dYes" type="button">Delete</button><button class="btn ghost" id="dNo" type="button">Keep</button></div></div>`
         :canEdit(f)?`<div class="row"><button class="btn" id="dEdit" type="button">Edit</button><button class="btn ghost danger" id="dDel" type="button">Delete</button></div>`:""}
     </div>`;
   el.hidden=false; fillPhotos(el);
+  el.querySelectorAll(".pthumb").forEach(b=>b.onclick=()=>{
+    const t=document.createElement("div"); t.innerHTML=photoImg(ph[+b.dataset.i],"ph",f.name);
+    el.querySelector(".ph").replaceWith(t.firstElementChild); fillPhotos(el);
+    el.querySelectorAll(".pthumb").forEach(x=>x.classList.toggle("on",x===b));
+  });
   $("dClose").onclick=()=>select(null);
   if($("dEdit")) $("dEdit").onclick=()=>openForm(f);
   if($("dDel")) $("dDel").onclick=()=>{confirmDel=true;renderDetail();};
   if($("dNo")) $("dNo").onclick=()=>{confirmDel=false;renderDetail();};
-  if($("dYes")) $("dYes").onclick=async()=>{ try{ await db.doc("finds/"+f.id).delete(); if(f.photoId&&assets) assets.delete(f.photoId).catch(()=>{}); select(null);}catch(err){ alertErr("Couldn’t delete: "+(err?.message||err)); } };
+  if($("dYes")) $("dYes").onclick=async()=>{ try{ await db.doc("finds/"+f.id).delete(); if(assets) photosOf(f).forEach(p=>p.id&&assets.delete(p.id).catch(()=>{})); select(null);}catch(err){ alertErr("Couldn’t delete: "+(err?.message||err)); } };
 }
 function alertErr(msg){ $("status").textContent=msg; }
 
 /* ---------- form ---------- */
-let pendingPhoto=null; // {blob, url}
+let photoItems=[]; // [{kind:"saved", p} | {kind:"new", blob, url}]
+const lastFinder = () => { try{ return localStorage.getItem("mvf-finder")||""; }catch(e){ return ""; } };
+function renderPhotoGrid(){
+  $("pgrid").innerHTML=photoItems.map((it,i)=>{ const src = it.kind==="new" ? it.url : thumbSrc(it.p);
+    return `<div class="pitem">${src?`<img src="${esc(src)}" alt="">`:""}${i?`<button type="button" class="pcov" data-i="${i}">Make cover</button>`:`<span class="pcover">Cover</span>`}<button type="button" class="prm" data-i="${i}" aria-label="Remove photo ${i+1}">×</button></div>`; }).join("");
+  $("drop").hidden = photoItems.length>=MAX_PHOTOS;
+  $("dropText").innerHTML = photoItems.length ? `Add more photos (up to ${MAX_PHOTOS})` : "Drop photos or tap to choose. Add up to 8; the first one is the cover.<br>Location and date are read from the photos when they have them.";
+}
+$("pgrid").onclick=e=>{
+  const b=e.target.closest("button"); if(!b) return; const i=+b.dataset.i;
+  if(b.classList.contains("prm")){ const [it]=photoItems.splice(i,1); if(it?.kind==="new") URL.revokeObjectURL(it.url); }
+  if(b.classList.contains("pcov")){ const [it]=photoItems.splice(i,1); photoItems.unshift(it); }
+  renderPhotoGrid();
+};
 function openForm(f=null){
-  editing=f?.id||null; pendingPhoto=null;
+  editing=f?.id||null; photoItems=photosOf(f).map(p=>({kind:"saved", p}));
   $("formTitle").textContent=f?"Edit find":"Log a find";
   $("saveBtn").textContent=f?"Save changes":"Save find";
   $("fCat").value=f?catLabel(f.category):""; $("fName").value=f?.name||""; $("fAge").value=f?.age||"";
   $("fDate").value=f?.foundOn||new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
   $("fLat").value=f?.lat??""; $("fLon").value=f?.lon??""; $("fNotes").value=f?.notes||"";
   $("fPhoto").value=""; $("formErr").hidden=true; $("photoHint").textContent=""; $("photoHint").className="hint";
-  setDropImg(f?.thumb||(f?.photoUrl&&!String(f.photoUrl).startsWith("photo:")?f.photoUrl:null));
-  if(f?.photoUrl && String(f.photoUrl).startsWith("photo:")) photoData(f.photoUrl.slice(6)).then(v=>{ if(v && editing===f.id && !pendingPhoto) setDropImg(v); });
+  renderPhotoGrid();
+  $("fFinder").value = f ? finderOf(f) : lastFinder(); $("fLink").value = f?.link || "";
   $("photoHint").textContent = assets ? "" : "Photos can’t be saved until the database is set up.";
   $("fPhoto").disabled=!assets;
   updateLocHint();
@@ -907,7 +981,6 @@ function openForm(f=null){
 }
 function closeForm(){ stopPick(); $("formView").hidden=true; $("listView").hidden=false; editing=null; renderDetail(); }
 $("formCancel").onclick=closeForm; $("formCancel2").onclick=closeForm;
-function setDropImg(url){ const img=$("dropImg"); if(url){ img.src=url; img.hidden=false; $("dropText").hidden=true; } else { img.hidden=true; $("dropText").hidden=false; } }
 function updateLocHint(src){
   const lat=parseFloat($("fLat").value), lon=parseFloat($("fLon").value);
   if(isNaN(lat)||isNaN(lon)){ $("locHint").textContent=""; return; }
@@ -919,26 +992,32 @@ $("fLat").oninput=()=>updateLocHint(); $("fLon").oninput=()=>updateLocHint();
 const drop=$("drop");
 ["dragenter","dragover"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over");}));
 ["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over");}));
-drop.addEventListener("drop",e=>{ const file=e.dataTransfer.files[0]; if(file&&assets) handlePhoto(file); });
-$("fPhoto").onchange=e=>{ const file=e.target.files[0]; if(file) handlePhoto(file); };
+drop.addEventListener("drop",e=>{ const fs=[...e.dataTransfer.files].filter(f=>/^image\//.test(f.type)); if(fs.length&&assets) handlePhotos(fs); });
+$("fPhoto").onchange=e=>{ const fs=[...e.target.files]; e.target.value=""; if(fs.length) handlePhotos(fs); };
 
-async function handlePhoto(file){
-  const hint=$("photoHint"); hint.className="hint"; hint.textContent="Reading photo…";
-  try{
-    const buf=await file.arrayBuffer();
-    const exif=readExif(buf);
-    const bmp=await createImageBitmap(file,{imageOrientation:"from-image"});
-    const max=1800, s=Math.min(1,max/Math.max(bmp.width,bmp.height));
-    const c=document.createElement("canvas"); c.width=Math.round(bmp.width*s); c.height=Math.round(bmp.height*s);
-    c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
-    const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",0.86));
-    pendingPhoto={blob,url:URL.createObjectURL(blob)}; setDropImg(pendingPhoto.url);
-    const got=[];
-    if(exif.lat!=null && !$("fLat").value){ $("fLat").value=exif.lat.toFixed(5); $("fLon").value=exif.lon.toFixed(5); got.push("location"); updateLocHint("From photo"); }
-    if(exif.date && !editing){ $("fDate").value=exif.date; got.push("date"); }
-    hint.textContent=got.length?`Filled in ${got.join(" and ")} from the photo.`:"Photo ready. It had no location data, so pick the spot on the map.";
-    if(got.length) hint.className="hint ok";
-  }catch(err){ hint.textContent="That file couldn’t be read as an image. Try a JPEG or PNG."; pendingPhoto=null; }
+async function handlePhotos(files){
+  const hint=$("photoHint"); hint.className="hint";
+  const room=MAX_PHOTOS-photoItems.length, take=files.slice(0,room), got=new Set(); let bad=0;
+  for(let i=0;i<take.length;i++){
+    hint.textContent = take.length>1 ? `Reading photo ${i+1} of ${take.length}…` : "Reading photo…";
+    try{
+      const file=take[i], exif=readExif(await file.arrayBuffer());
+      const bmp=await createImageBitmap(file,{imageOrientation:"from-image"});
+      const s=Math.min(1,1800/Math.max(bmp.width,bmp.height)), c=document.createElement("canvas");
+      c.width=Math.round(bmp.width*s); c.height=Math.round(bmp.height*s); c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+      const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",0.86));
+      photoItems.push({kind:"new", blob, url:URL.createObjectURL(blob)}); renderPhotoGrid();
+      if(exif.lat!=null && !$("fLat").value){ $("fLat").value=exif.lat.toFixed(5); $("fLon").value=exif.lon.toFixed(5); got.add("location"); updateLocHint("From photo"); }
+      if(exif.date && !editing && !got.has("date")){ $("fDate").value=exif.date; got.add("date"); }
+    }catch(err){ bad++; }
+  }
+  const parts=[];
+  if(got.size) parts.push(`Filled in ${[...got].join(" and ")} from the photos.`);
+  else if(!$("fLat").value) parts.push("These photos had no location data, so pick the spot on the map.");
+  if(bad) parts.push(`${bad} file${bad>1?"s":""} couldn’t be read as images.`);
+  if(files.length>take.length) parts.push(`Only ${MAX_PHOTOS} photos fit on one find, so ${files.length-take.length} ${files.length-take.length>1?"were":"was"} left out.`);
+  hint.textContent = parts.join(" ") || "Photos ready.";
+  hint.className = got.size&&!bad ? "hint ok" : bad ? "err" : "hint";
 }
 
 // Minimal JPEG EXIF reader: GPS + DateTimeOriginal
@@ -979,17 +1058,31 @@ $("form").onsubmit=async e=>{
   const lat=latS?parseFloat(latS):null, lon=lonS?parseFloat(lonS):null;
   if(!name){ err.textContent="Give the item a name, even a working one like “Unknown token”."; err.hidden=false; $("fName").focus(); return; }
   if((latS||lonS)&&(isNaN(lat)||isNaN(lon)||Math.abs(lat)>90||Math.abs(lon)>180)){ err.textContent="Latitude and longitude need to be decimal degrees, e.g. 37.9060 and −122.5449."; err.hidden=false; return; }
+  let link=$("fLink").value.trim();
+  if(link && !/^https?:\/\//i.test(link)) link="https://"+link;
+  if(link){ try{ const u=new URL(link); if(!/\./.test(u.hostname)) throw 0; }catch(e2){ err.textContent="That reference link doesn’t look like a web address. Paste the full link, like https://numista.com/…"; err.hidden=false; $("fLink").focus(); return; } }
+  const finder=$("fFinder").value.trim();
   const btn=$("saveBtn"); btn.disabled=true; btn.textContent="Saving…";
   try{
     const prev=editing?finds.find(f=>f.id===editing):null;
     const data={ name, category:catLabel(cat||"Other"), age:$("fAge").value.trim(), foundOn:$("fDate").value||"",
-      lat, lon, notes:$("fNotes").value.trim(), updatedAt:new Date().toISOString(),
-      photoId:prev?.photoId||"", photoUrl:prev?.photoUrl||"", thumb:prev?.thumb||"", example:false, createdBy:prev?.createdBy||uid() };
-    if(pendingPhoto&&assets){ const up=await assets.upload(pendingPhoto.blob,{type:"image/jpeg"}); data.photoId=up.id; data.photoUrl=up.url; data.thumb=up.thumb||"";
-      if(prev?.photoId) assets.delete(prev.photoId).catch(()=>{}); }
+      lat, lon, notes:$("fNotes").value.trim(), finder, link, updatedAt:new Date().toISOString(), example:false, createdBy:prev?.createdBy||uid() };
+    const photos=[], fresh=photoItems.filter(it=>it.kind==="new").length; let n=0;
+    for(const it of photoItems){
+      if(it.kind==="saved"){ photos.push(it.p); continue; }
+      if(!assets) continue;
+      btn.textContent = fresh>1 ? `Uploading photo ${++n} of ${fresh}…` : "Uploading photo…";
+      const up=await assets.upload(it.blob,{type:"image/jpeg"});
+      photos.push({id:up.id, url:up.url, thumb:up.thumb||""});
+    }
+    btn.textContent="Saving…";
+    data.photos=photos; data.photoId=photos[0]?.id||""; data.photoUrl=photos[0]?.url||""; data.thumb=photos[0]?.thumb||"";
+    const removed=photosOf(prev).filter(p=>p.id && !photos.some(q=>q.id===p.id));
     let id=editing;
     if(editing) await db.doc("finds/"+editing).set({...data, createdAt:prev?.createdAt||data.updatedAt});
     else { const ref=await db.collection("finds").add({...data, createdAt:data.updatedAt}); id=ref.id; }
+    if(assets) removed.forEach(p=>assets.delete(p.id).catch(()=>{}));
+    try{ if(finder) localStorage.setItem("mvf-finder",finder); }catch(e3){}
     closeForm(); selected=id; setTimeout(()=>{ const f=finds.find(f=>f.id===id); if(f) select(id); },300);
   }catch(ex){
     err.textContent = ex?.code==="too_large" ? "That photo is too large to upload. Try a smaller one." :
