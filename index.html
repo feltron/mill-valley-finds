@@ -13,7 +13,7 @@
 :root{
   --bg:#E9ECE6; --surface:#F7F8F4; --raised:#FFFFFF; --ink:#1A2320; --muted:#5D6A63; --line:#CBD2CA;
   --accent:#A8682A; --accent-ink:#FFFFFF; --danger:#B23A2E;
-  --clay:#C8C9C7; --t-line:#1E2A21; --r-major:#F4B23E; --r-road:#FFFFFF; --r-service:#ECE6DA; --r-trail:#C4562C; --r-oldrail:#9B3FB5; --r-rail:#3A3A3A; --sl-ink:#1B231E; --sl-halo:#FFFFFF; --sl-trail:#8A3413; --sl-oldrail:#6A2484; --soil-top:#3B2B1E; --soil-mid:#8A6A48; --soil-low:#B89D78; --t-low:#4C6A4F; --t-mid:#7F975F; --t-high:#D2BE86; --t-water:#B3C7CB; --t-contour:rgba(30,38,30,.28); --t-index:rgba(30,38,30,.55);
+  --clay:#C8C9C7; --land-federal:#7A5AA8; --land-state:#2E8B57; --land-water:#2F7BC0; --land-county:#D08A1E; --land-city:#D2504E; --land-other:#7F8780; --hist-ink:#5A3418; --hist-halo:rgba(255,250,240,.9); --t-line:#1E2A21; --r-major:#F4B23E; --r-road:#FFFFFF; --r-service:#ECE6DA; --r-trail:#C4562C; --r-oldrail:#9B3FB5; --r-rail:#3A3A3A; --sl-ink:#1B231E; --sl-halo:#FFFFFF; --sl-trail:#8A3413; --sl-oldrail:#6A2484; --soil-top:#3B2B1E; --soil-mid:#8A6A48; --soil-low:#B89D78; --t-low:#4C6A4F; --t-mid:#7F975F; --t-high:#D2BE86; --t-water:#B3C7CB; --t-contour:rgba(30,38,30,.28); --t-index:rgba(30,38,30,.55);
   --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
   --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-data:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
@@ -134,6 +134,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .lbx:hover,.lbnav:hover{background:rgba(255,255,255,.24)}
 .lbx:focus-visible,.lbnav:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .lbcount{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);color:#fff;opacity:.8;font:500 12px var(--f-data)}
+.landkey{gap:3px}
+.landkey .lk{display:flex;align-items:center;gap:6px;color:var(--ink);font-family:var(--f-body);font-size:11px}
+.landkey .lk i{width:12px;height:12px;border-radius:3px;opacity:.75;display:inline-block}
 .elevbox{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:12px}
 .elevbox .note{margin:0}
 .step{margin:0;font:600 11px/1.2 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
@@ -314,6 +317,7 @@ form{display:grid;gap:14px}
         <div class="ramp"></div>
         <div class="ramp-l"><span>0</span><span>1,300</span><span>2,571 ft</span></div>
         </div>
+        <div class="legend landkey" id="landKey" hidden></div>
         <div class="legend layerbadge" id="layerBadge" hidden><b id="lbYear"></b><span><span id="lbName"></span><span id="lbCredit"></span></span></div>
       </div>
       <div class="tip" id="tip" hidden></div>
@@ -373,6 +377,19 @@ form{display:grid;gap:14px}
           <span class="hint" id="streetHint"></span>
           <p class="hint">If none of them load, open the same search in <a id="osmTurbo" href="#" target="_blank" rel="noopener">Overpass Turbo</a>, press Run, then choose Export → GeoJSON → Download. If every server refuses to connect, your network may block them; a VPN or work network is the usual cause.</p>
           <div class="row"><button class="btn ghost" type="button" id="streetsBack">Back</button></div>
+        </div>
+
+        <div class="lp" id="lpLand" hidden>
+          <h4 class="step">Land management · OpenStreetMap</h4>
+          <ol>
+            <li>Open the download from any one of these servers (if one won’t connect or is busy, try the next): <span id="landLinks"></span>. It asks for the park, preserve and watershed boundaries within 3 miles of City Hall.</li>
+            <li>Save that page as a file (File → Save Page As, or ⌘S).</li>
+            <li>Drop the file here.</li>
+          </ol>
+          <div class="drop" id="landDrop"><span>Drop the saved file, or tap to choose</span><input type="file" id="fLand" aria-label="OpenStreetMap land data file"></div>
+          <span class="hint" id="landHint"></span>
+          <p class="hint">If none of them load, open the same search in <a id="landTurbo" href="#" target="_blank" rel="noopener">Overpass Turbo</a>, press Run, then choose Export → GeoJSON → Download. Boundaries come from OpenStreetMap volunteers; treat them as a guide and check each agency’s own maps and rules.</p>
+          <div class="row"><button class="btn ghost" type="button" id="landBack">Back</button></div>
         </div>
 
         <div class="lp" id="lpRelief" hidden>
@@ -851,7 +868,7 @@ renderer.domElement.addEventListener("pointerup",ev=>{
     const [lat,lon]=xz2ll(hit.point.x,hit.point.z);
     $("fLat").value=lat.toFixed(5); $("fLon").value=lon.toFixed(5); updateLocHint("Picked on map"); stopPick(); return; }
   const hit=ray.intersectObjects(markers.map(m=>m.head))[0];
-  if(hit) select(hit.object.userData.id,{fly:false}); else if(selected) select(null);
+  if(hit) select(hit.object.userData.id,{fly:false}); else if(!identifyLand(ev) && selected) select(null);
 });
 function startPick(){ picking=true; mapEl.classList.add("picking"); $("pickBanner").hidden=false; $("detail").hidden=true; if(innerWidth<=860) mapEl.scrollIntoView({behavior:"smooth",block:"start"}); }
 function stopPick(){ picking=false; mapEl.classList.remove("picking"); $("pickBanner").hidden=true; if(innerWidth<=860) $("formView").scrollIntoView({behavior:"smooth",block:"start"}); }
@@ -906,7 +923,7 @@ function render(){
       <div class="item-t"><b>${esc(f.name||"Untitled find")}${f.example?'<span class="tag">Example</span>':""}</b><span>${[catLabel(f.category), f.age, String(f.place||"").trim(), finderOf(f)].filter(Boolean).map(esc).join(" · ")}</span></div>
       <div class="item-m">${f.foundOn?esc(f.foundOn):"—"}<br>${e==null?"outside circle":fmtNum(e)+" ft"}</div></li>`;}).join("");
   if(!finds.length && db) $("list").innerHTML=`<li class="empty"><b>No finds logged yet</b>Tap “Log a find”, add a photo, and pick the spot on the map.</li>`;
-  buildMarkers(); renderTimeline(); renderDetail();
+  paintHeat(); buildMarkers(); renderTimeline(); renderDetail();
 }
 // click a category to show only it; click it again to show all. ⌘/Ctrl/Shift-click adds or removes one category.
 $("chips").onclick=e=>{
@@ -1174,7 +1191,7 @@ const CORNER_NAMES = ["top-left","top-right","bottom-right","bottom-left"];
 /* layer stack: every layer has its own switch and opacity; they blend over a plain clay surface */
 const texCache = new Map();
 const MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
-const LAYER_DEFAULTS = {elev:{on:false,op:1}, satellite:{on:false,op:1}, relief:{on:true,op:0.6}, contours:{on:false,op:0.6}, streets:{on:true,op:0.3}};
+const LAYER_DEFAULTS = {elev:{on:false,op:1}, satellite:{on:false,op:1}, relief:{on:true,op:0.6}, contours:{on:false,op:0.6}, streets:{on:true,op:0.3}, heat:{on:false,op:0.85}, historic:{on:false,op:1}, land:{on:false,op:0.6}};
 let layerState = null;
 try{ layerState = JSON.parse(localStorage.getItem("mvf-layers-v2")||"null"); }catch(e){} // v2: everyone starts from the current defaults
 if(!layerState) layerState = {};
@@ -1201,7 +1218,11 @@ function layerDefs(){
   const s=satLayer(); L.push(s ? {...s, sub:"USGS / USDA aerial imagery"} : {id:"satellite", kind:"satellite", missing:true, name:"Satellite", sub:"Add an aerial image", add:"sat"});
   const r=reliefLayer(); L.push(r ? {...r, sub:"Bare ground at 1 m, trees removed"} : {id:"relief", kind:"relief", missing:true, name:"Lidar relief", sub:"Add 1 m bare-earth relief", add:"relief"});
   historicalLayers().forEach(h=>L.push({...h, sub:h.credit||"Historical map"}));
+  L.push(landData ? {id:"land", kind:"land", name:"Land management", sub:"Who manages each park and preserve", credit:"Land: © OpenStreetMap contributors"}
+                  : {id:"land", kind:"land", missing:true, name:"Land management", sub:"Add park and preserve boundaries", add:"land"});
+  L.push({id:"heat", kind:"heat", name:"Find density", sub:"Where finds cluster; follows your filters"});
   L.push({id:"contours", kind:"contours", name:"Contour lines", sub:"Every 100 ft, bold every 500 ft"});
+  L.push({id:"historic", kind:"historic", name:"Historic sites", sub:"Inns, mills, depots and rail grades", credit:"Historic sites: HMDB, NPS, Friends of Mt. Tam"});
   L.push(streetData ? {id:"streets", kind:"streets", name:"Streets & trails", sub:"Roads, trails and old rail grades", credit:"Streets: © OpenStreetMap contributors"}
                     : {id:"streets", kind:"streets", missing:true, name:"Streets & trails", sub:"Add OpenStreetMap data", add:"streets"});
   return L;
@@ -1273,9 +1294,10 @@ function applyLayer(opts={}){
   for(const d of stack){
     const st = d.isPreview ? {on:true, op:preview.op} : stateOf(d.id, d.kind), on = st.on && st.op>0;
     if(st.on && !d.isPreview) onCount++;
-    if(d.kind==="elev" || d.kind==="contours"){
-      const o=overlayFor(d.kind, d.kind==="contours"); used.add(d.kind);
-      if(!o.mat.map){ o.mat.map = d.kind==="elev" ? texture : lineTexture; o.mat.needsUpdate=true; }
+    const painted={elev:texture, contours:lineTexture, heat:heatTexture, historic:histTexture, land:landTexture}[d.kind];
+    if(painted){
+      const o=overlayFor(d.kind, d.kind!=="elev"); used.add(d.kind);
+      if(o.mat.map!==painted){ o.mat.map = painted; o.mat.needsUpdate=true; }
       o.mat.opacity=st.op; o.mesh.visible=on; if(on) setDepthOrder(o.mesh,o.mat,k++);
       continue;
     }
@@ -1302,6 +1324,7 @@ function applyLayer(opts={}){
   mapEl.classList.toggle("sat", satOn);
   stemMat.color.set(satOn ? "#ffffff" : cssVar("--ink"));
   $("elevLegend").hidden = !stateOf("elev","elev").on;
+  $("landKey").hidden = !(landData && stateOf("land","land").on);
   $("layerBtnLabel").textContent = onCount;
   // corner badge: the topmost visible historical map, plus credits for what's showing
   const vis = stack.filter(d=>d.isPreview || stateOf(d.id,d.kind).on);
@@ -1324,7 +1347,7 @@ function mapYears(){
 
 /* layer panel */
 let panelMode = "list", openRow = null, confirmLayerDel = null;
-const PANELS = {list:"lpList", sat:"lpSat", import:"lpImport", align:"lpAlign", elev:"lpElev", relief:"lpRelief", streets:"lpStreets"};
+const PANELS = {list:"lpList", sat:"lpSat", import:"lpImport", align:"lpAlign", elev:"lpElev", relief:"lpRelief", streets:"lpStreets", land:"lpLand"};
 function openPanel(mode="list"){
   panelMode=mode; $("layerPanel").hidden=false; $("layerBtn").setAttribute("aria-expanded","true");
   Object.entries(PANELS).forEach(([m,id])=>{ $(id).hidden = m!==mode; });
@@ -1342,13 +1365,14 @@ $("histBack").onclick=()=>openPanel("list");
 function layerTitle(d){ return d.kind==="historical" ? `${d.year?d.year+" · ":""}${d.name||"Untitled map"}` : d.name; }
 function rowActions(d){
   if(confirmLayerDel===d.id){
-    const what = d.kind==="streets" ? "the street data" : `“${esc(d.name||"this map")}”`;
-    return `<div class="confirm" style="width:100%">Remove ${what}? ${d.kind==="streets"?"You can download it again later.":"Its scan is deleted for good."}<div class="row"><button class="btn danger" type="button" data-act="del-yes">Remove</button><button class="btn ghost" type="button" data-act="del-no">Keep</button></div></div>`;
+    const what = d.kind==="streets" ? "the street data" : d.kind==="land" ? "the land data" : `“${esc(d.name||"this map")}”`;
+    return `<div class="confirm" style="width:100%">Remove ${what}? ${d.kind==="streets"||d.kind==="land"?"You can download it again later.":"Its scan is deleted for good."}<div class="row"><button class="btn danger" type="button" data-act="del-yes">Remove</button><button class="btn ghost" type="button" data-act="del-no">Keep</button></div></div>`;
   }
   if(d.kind==="satellite") return `<button class="btn" type="button" data-act="sat">Replace image or add 1 m tiles</button>`;
   if(d.kind==="relief") return `<button class="btn" type="button" data-act="relief">Manage tiles</button>`;
   if(d.kind==="historical") return `<button class="btn" type="button" data-act="align">Adjust alignment</button><button class="btn ghost danger" type="button" data-act="del">Delete</button>`;
   if(d.kind==="streets") return `<button class="btn" type="button" data-act="streets">Update data</button><button class="btn ghost danger" type="button" data-act="del">Remove</button>`;
+  if(d.kind==="land") return `<button class="btn" type="button" data-act="land">Update data</button><button class="btn ghost danger" type="button" data-act="del">Remove</button>`;
   return "";
 }
 function renderLayerPanel(){
@@ -1396,12 +1420,14 @@ $("layerList").addEventListener("click",async e=>{
   if(act==="sat") openPanel("sat");
   if(act==="relief") openPanel("relief");
   if(act==="streets") openPanel("streets");
+  if(act==="land") openPanel("land");
   if(act==="align") startAlign({...d, shift:{e:d.shift?.e||0, n:d.shift?.n||0}}, false);
   if(act==="del"){ confirmLayerDel=d.id; renderLayerPanel(); }
   if(act==="del-no"){ confirmLayerDel=null; renderLayerPanel(); }
   if(act==="del-yes"){
     try{
       if(d.kind==="streets") await removeStreets();
+      else if(d.kind==="land") await removeLand();
       else {
         await db.doc("layers/"+d.id).delete();
         if(d.assetId && assets) assets.delete(d.assetId).catch(()=>{});
@@ -2249,7 +2275,7 @@ async function importStreets(file){
     loadedStreetsUrl=up.url; streetData=decodeStreets(packed);
     await db.doc("settings/streets").set({id:up.id, url:up.url, ways:packed.ways.length, source:"OpenStreetMap", updatedAt:new Date().toISOString()});
     if(old && old!==up.id) assets.delete(old).catch(()=>{});
-    setLayer("streets",{on:true}); buildStreets(); applyLayer();
+    setLayer("streets",{on:true}); buildStreets(); paintHistoric(); applyLayer();
     hint.className="hint ok"; hint.textContent=`Added ${packed.ways.length.toLocaleString()} streets, trails and rail lines.`;
   }catch(err){ hint.className="err"; hint.textContent = err?.code==="too_large" ? "The street data is too large to save." : (err?.message||String(err)); }
 }
@@ -2261,13 +2287,266 @@ async function loadStreets(d){
   try{
     const j=await (await fetch(d.url)).json();
     if(loadedStreetsUrl!==d.url) return;
-    streetData=decodeStreets(j); buildStreets(); applyLayer();
+    streetData=decodeStreets(j); buildStreets(); paintHistoric(); applyLayer();
   }catch(e){ loadedStreetsUrl=null; }
 }
 async function removeStreets(){ const id=streetDoc?.id; await db.doc("settings/streets").delete(); if(id && assets) assets.delete(id).catch(()=>{}); }
 
+/* ---------- painted layers: find density, historic sites, land management ---------- */
+// Each is a canvas covering the terrain block (same frame as the contour texture), draped like the other layers.
+function demCanvasSize(n){ return [n, Math.round(n*(DEM.north-DEM.south)*KY/((DEM.east-DEM.west)*KX))]; }
+const demPx = (lat,lon,W,H) => [(lon-DEM.west)/(DEM.east-DEM.west)*W, (DEM.north-lat)/(DEM.north-DEM.south)*H];
+function makeCanvasTex(){ const c=document.createElement("canvas"); const t=new THREE.CanvasTexture(c); t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return [c,t]; }
+
+/* find density: a live heat map of the finds currently shown (follows category and person filters) */
+const [heatCanvas, heatTexture] = makeCanvasTex();
+const HEAT_RAMP = [[0,[255,237,160]],[0.35,[254,178,76]],[0.65,[240,59,32]],[1,[128,0,38]]];
+function heatColor(t){ for(let i=1;i<HEAT_RAMP.length;i++){ const [a,ca]=HEAT_RAMP[i-1], [b,cb]=HEAT_RAMP[i]; if(t<=b){ const f=(t-a)/(b-a); return ca.map((v,j)=>v+(cb[j]-v)*f); } } return HEAT_RAMP[HEAT_RAMP.length-1][1]; }
+function paintHeat(){
+  const [W,H]=demCanvasSize(IS_SMALL?768:1024); heatCanvas.width=W; heatCanvas.height=H;
+  const ctx=heatCanvas.getContext("2d"), acc=new Float32Array(W*H);
+  const mpp=(DEM.east-DEM.west)*KX*1000/W, sigma=Math.max(2,140/mpp), R=Math.ceil(sigma*3);
+  const pts=visibleFinds().filter(f=>inCircle(f.lat,f.lon));
+  for(const f of pts){
+    const [cx,cy]=demPx(f.lat,f.lon,W,H);
+    for(let y=Math.max(0,Math.floor(cy-R)); y<=Math.min(H-1,Math.ceil(cy+R)); y++)
+      for(let x=Math.max(0,Math.floor(cx-R)); x<=Math.min(W-1,Math.ceil(cx+R)); x++){
+        const d2=(x-cx)*(x-cx)+(y-cy)*(y-cy); if(d2<=R*R) acc[y*W+x]+=Math.exp(-d2/(2*sigma*sigma));
+      }
+  }
+  let max=0; for(const v of acc) if(v>max) max=v;
+  const img=ctx.createImageData(W,H), D=img.data;
+  if(max>0) for(let k=0;k<acc.length;k++){
+    const t=acc[k]/max; if(t<0.02) continue;
+    const c=heatColor(Math.sqrt(t)), a=Math.min(1,(t-0.02)/0.25);
+    D[k*4]=c[0]; D[k*4+1]=c[1]; D[k*4+2]=c[2]; D[k*4+3]=Math.round(225*a);
+  }
+  ctx.putImageData(img,0,0); heatTexture.needsUpdate=true;
+}
+
+/* historic sites: painted like annotations on an old survey map */
+// Positions: HMDB marker coordinates, Wikipedia, or where the old railway grade meets other trails in OpenStreetMap.
+const HISTORIC_SITES = [
+  {n:"Reed’s Mill", y:"1830s · rebuilt 1990", lat:37.90488, lon:-122.55337, at:"l"},
+  {n:"John Reed adobe site", y:"Mexican land grant", lat:37.90668, lon:-122.54630, at:"r"},
+  {n:"Outdoor Art Club", y:"1904", lat:37.90677, lon:-122.54657, at:"t"},
+  {n:"Mill Valley depot", y:"1890 · rebuilt 1929", lat:37.90610, lon:-122.54808, at:"b"},
+  {n:"Tavern of Tamalpais", y:"1896 · East Peak station", lat:37.9277, lon:-122.5797, at:"l", approx:true},
+  {n:"West Point Inn", y:"1904", lat:37.91676, lon:-122.59416, at:"r"},
+  {n:"Double Bow Knot · Mesa Station", y:"Muir Woods branch, 1907", lat:37.9195, lon:-122.5729, at:"t"},
+  {n:"Mountain Home Inn", y:"1912", lat:37.9115, lon:-122.5776, at:"r"},
+  {n:"First Muir Inn", y:"1908–1913 · now Camp Alice Eastwood", lat:37.9040, lon:-122.5808, at:"l"},
+  {n:"Muir Woods", y:"National Monument, 1908", lat:37.8915, lon:-122.5705, at:"b", approx:true},
+  {n:"Mill Valley Air Force Station", y:"1951–1980", lat:37.92389, lon:-122.59694, at:"t"},
+];
+const HISTORIC_LINES = [ // [match on OSM name, class filter, label]
+  [/old railroad grade/i, null, "Mt. Tamalpais Scenic Railway, 1896–1930"],
+  [/gravity car road/i, null, "Muir Woods branch, 1907–1930"],
+  [/mill valley - sausalito path/i, "oldrail", "Northwestern Pacific to Sausalito, 1890–1940"],
+  [/(?:)/, "oldrail", ""], // other abandoned rail lines in the circle
+];
+const [histCanvas, histTexture] = makeCanvasTex();
+function paintHistoric(){
+  const [W,H]=demCanvasSize(IS_SMALL?2048:4096); histCanvas.width=W; histCanvas.height=H;
+  const g=histCanvas.getContext("2d"), ppm=W/((DEM.east-DEM.west)*KX*1000); // pixels per meter
+  const ink=cssVar("--hist-ink")||"#5A3418", halo=cssVar("--hist-halo")||"rgba(255,250,240,.9)";
+  g.clearRect(0,0,W,H); g.lineCap="round"; g.lineJoin="round";
+  // rail grades
+  const best=new Map(); // label -> longest way carrying it
+  const wayLen=w=>{ let L=0; for(let i=2;i<w.pts.length;i+=2) L+=Math.hypot((w.pts[i+1]-w.pts[i-1])*KX,(w.pts[i]-w.pts[i-2])*KY); return L; };
+  if(streetData) for(const w of streetData.ways){
+    const rule=HISTORIC_LINES.find(([re,cls])=>(!cls||w.cls===cls) && re.test(w.name||""));
+    if(!rule) continue;
+    g.beginPath();
+    for(let i=0;i<w.pts.length;i+=2){ const [x,y]=demPx(w.pts[i],w.pts[i+1],W,H); i?g.lineTo(x,y):g.moveTo(x,y); }
+    g.strokeStyle=halo; g.lineWidth=Math.max(3,11*ppm); g.setLineDash([]); g.stroke();
+    g.strokeStyle=ink; g.lineWidth=Math.max(1.5,5*ppm); g.setLineDash([Math.max(4,22*ppm),Math.max(3,14*ppm)]); g.stroke();
+    if(rule[2]){ const L=wayLen(w); if(!best.has(rule[2]) || L>best.get(rule[2]).L) best.set(rule[2],{w,L}); }
+  }
+  g.setLineDash([]);
+  for(const [text,{w}] of best){ // label along the middle of the longest stretch
+    const n=w.pts.length/2, m=Math.max(1,Math.floor(n/2))*2, i0=Math.max(0,m-4), i1=Math.min(w.pts.length-2,m+4);
+    const [ax,ay]=demPx(w.pts[i0],w.pts[i0+1],W,H), [bx,by]=demPx(w.pts[i1],w.pts[i1+1],W,H), [cx,cy]=demPx(w.pts[m],w.pts[m+1],W,H);
+    let ang=Math.atan2(by-ay,bx-ax); if(ang>Math.PI/2) ang-=Math.PI; if(ang<-Math.PI/2) ang+=Math.PI;
+    g.save(); g.translate(cx,cy); g.rotate(ang);
+    g.font=`italic ${Math.round(Math.max(11,34*ppm))}px "Iowan Old Style","Palatino","Georgia",serif`; g.textAlign="center"; g.textBaseline="bottom";
+    g.lineWidth=Math.max(3,9*ppm); g.strokeStyle=halo; g.strokeText(text,0,-Math.max(4,12*ppm)); g.fillStyle=ink; g.fillText(text,0,-Math.max(4,12*ppm));
+    g.restore();
+  }
+  g.setLineDash([]);
+  // sites
+  const fs=Math.round(Math.max(12,40*ppm)), fs2=Math.round(fs*0.74), r=Math.max(5,16*ppm);
+  for(const s of HISTORIC_SITES){
+    const [x,y]=demPx(s.lat,s.lon,W,H);
+    g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fillStyle=halo; g.fill(); g.lineWidth=Math.max(1.5,5*ppm); g.strokeStyle=ink; g.stroke();
+    g.beginPath(); g.arc(x,y,r*0.38,0,Math.PI*2); g.fillStyle=ink; g.fill();
+    const gap=r+Math.max(3,10*ppm);
+    let tx=x, ty=y, align="left", base="middle";
+    if(s.at==="r"){ tx=x+gap; } else if(s.at==="l"){ tx=x-gap; align="right"; } else if(s.at==="t"){ ty=y-gap-fs2; align="center"; base="bottom"; } else { ty=y+gap; align="center"; base="top"; }
+    g.textAlign=align; g.textBaseline=base; g.lineWidth=Math.max(3,12*ppm); g.strokeStyle=halo; g.fillStyle=ink;
+    const name=s.n+(s.approx?" (approx.)":"");
+    g.font=`italic 600 ${fs}px "Iowan Old Style","Palatino","Georgia",serif`;
+    const y1 = base==="middle" ? ty-fs2*0.55 : ty;
+    g.strokeText(name,tx,y1); g.fillText(name,tx,y1);
+    g.font=`${fs2}px "Iowan Old Style","Palatino","Georgia",serif`; g.textBaseline = base==="bottom" ? "top" : "top";
+    const y2 = base==="middle" ? y1+fs*0.62 : base==="bottom" ? ty+2 : ty+fs*1.05;
+    g.strokeText(s.y,tx,y2); g.fillText(s.y,tx,y2);
+  }
+  histTexture.needsUpdate=true;
+}
+
+/* land management: who manages each piece of public land (OpenStreetMap park and preserve boundaries) */
+const LAND_AGENCIES = {
+  federal:{label:"National Park Service", c:"--land-federal"},
+  state:{label:"California State Parks", c:"--land-state"},
+  water:{label:"Marin Municipal Water District", c:"--land-water"},
+  county:{label:"Marin County Parks", c:"--land-county"},
+  city:{label:"City & local parks", c:"--land-city"},
+  other:{label:"Other preserves", c:"--land-other"},
+};
+const LAND_ORDER = ["federal","state","water","county","other","city"]; // later ones paint on top
+function landAgency(t){
+  const s=[t.operator,t.owner,t["operator:short"],t.name,t.designation,t.protection_title].filter(Boolean).join(" | ").toLowerCase();
+  if(/national park service|\bnps\b|golden gate national|muir woods|national monument|national recreation area/.test(s)) return "federal";
+  if(/california (department of parks|state parks)|state park/.test(s)) return "state";
+  if(/water district|mmwd|watershed/.test(s)) return "water";
+  if(/marin county|county park|open space district|open space preserve/.test(s)) return "county";
+  if(/city of|town of|school|recreation/.test(s) || t.leisure==="park") return "city";
+  return "other";
+}
+let landData=null, landDoc=null, loadedLandUrl=null;
+const [landCanvas, landTexture] = makeCanvasTex();
+function paintLand(){
+  const [W,H]=demCanvasSize(IS_SMALL?1536:2048); landCanvas.width=W; landCanvas.height=H;
+  const g=landCanvas.getContext("2d"); g.clearRect(0,0,W,H);
+  if(!landData) { landTexture.needsUpdate=true; return; }
+  const areas=[...landData.areas].sort((a,b)=>LAND_ORDER.indexOf(a.a)-LAND_ORDER.indexOf(b.a));
+  for(const ar of areas){
+    const col=cssVar(LAND_AGENCIES[ar.a]?.c||"--land-other")||"#888";
+    g.beginPath();
+    for(const ring of ar.rings){ for(let i=0;i<ring.length;i+=2){ const [x,y]=demPx(ring[i],ring[i+1],W,H); i?g.lineTo(x,y):g.moveTo(x,y); } g.closePath(); }
+    g.globalAlpha=0.5; g.fillStyle=col; g.fill("evenodd");
+    g.globalAlpha=1; g.lineWidth=2; g.strokeStyle=col; g.stroke();
+  }
+  g.globalAlpha=1; landTexture.needsUpdate=true;
+  renderLandKey();
+}
+function renderLandKey(){
+  const present=new Set((landData?.areas||[]).filter(a=>a.rings.some(r=>ringNearCircle(r))).map(a=>a.a));
+  $("landKey").innerHTML = `<div>Land manager · check each agency’s rules</div>` + LAND_ORDER.filter(k=>present.has(k)).map(k=>`<span class="lk"><i style="background:var(${LAND_AGENCIES[k].c})"></i>${esc(LAND_AGENCIES[k].label)}</span>`).join("");
+}
+function ringNearCircle(r){ for(let i=0;i<r.length;i+=2) if(Math.hypot((r[i+1]-CLON)*KX,(CLAT-r[i])*KY)<RK+0.5) return true; return false; }
+function inRing(r,lat,lon){ let c=false; for(let i=0,j=r.length-2;i<r.length;j=i,i+=2){ const yi=r[i], xi=r[i+1], yj=r[j], xj=r[j+1]; if(((yi>lat)!==(yj>lat)) && lon<(xj-xi)*(lat-yi)/(yj-yi)+xi) c=!c; } return c; }
+function landAt(lat,lon){
+  if(!landData) return null; let hit=null;
+  for(const ar of landData.areas){ let inside=false; for(const r of ar.rings) if(inRing(r,lat,lon)) inside=!inside; if(inside && (!hit || LAND_ORDER.indexOf(ar.a)>=LAND_ORDER.indexOf(hit.a))) hit=ar; }
+  return hit;
+}
+// find where a screen ray meets the ground by marching along it (much cheaper than testing every triangle)
+function groundHit(ray){
+  const o=ray.ray.origin, d=ray.ray.direction; let prev=0;
+  for(let t=0.02;t<60;t+=0.02){
+    const x=o.x+d.x*t, y=o.y+d.y*t, z=o.z+d.z*t;
+    if(Math.hypot(x,z)>RK){ if(t>prev+0.5 && Math.hypot(o.x,o.z)<=RK) break; continue; }
+    if(y<=meshY(x,z)){ let a=t-0.02, b=t; for(let i=0;i<12;i++){ const m=(a+b)/2; (o.y+d.y*m<=meshY(o.x+d.x*m,o.z+d.z*m)) ? b=m : a=m; } return xz2ll(o.x+d.x*b, o.z+d.z*b); }
+    prev=t;
+  }
+  return null;
+}
+let landTipTimer=null;
+function identifyLand(ev){
+  if(!(stateOf("land","land").on && landData)) return false;
+  const ll=groundHit(ray); if(!ll) return false;
+  const ar=landAt(ll[0],ll[1]); const tip=$("tip"), r=renderer.domElement.getBoundingClientRect();
+  tip.innerHTML = ar ? `<b>${esc(ar.n||LAND_AGENCIES[ar.a].label)}</b><span>${esc(ar.op || LAND_AGENCIES[ar.a].label)}</span>` : `<b>Not public parkland</b><span>Private land, streets or unmapped</span>`;
+  tip.style.left=(ev.clientX-r.left)+"px"; tip.style.top=(ev.clientY-r.top)+"px"; tip.hidden=false;
+  clearTimeout(landTipTimer); landTipTimer=setTimeout(()=>{ if(!hoverId) tip.hidden=true; },3500);
+  return true;
+}
+
+/* land import: Overpass JSON (ways and relations with geometry) or GeoJSON -> compact JSON */
+const LAND_Q = `[out:json][timeout:180];(relation["boundary"~"^(protected_area|national_park)$"](around:4900,${CLAT},${CLON});way["boundary"~"^(protected_area|national_park)$"](around:4900,${CLAT},${CLON});relation["leisure"~"^(park|nature_reserve)$"](around:4900,${CLAT},${CLON});way["leisure"~"^(park|nature_reserve)$"](around:4900,${CLAT},${CLON}););out tags geom;`;
+$("landLinks").innerHTML = OSM_SERVERS.map(([n,u])=>`<a href="${esc(u+"?data="+encodeURIComponent(LAND_Q))}" target="_blank" rel="noopener">${esc(n)}</a>`).join(", ");
+$("landTurbo").href = "https://overpass-turbo.eu/?Q="+encodeURIComponent(LAND_Q)+"&R";
+function joinRings(segs){ // join open ways into closed rings by matching endpoints
+  const rings=[], pool=segs.map(s=>s.slice()), same=(a,b)=>Math.abs(a[0]-b[0])<1e-7 && Math.abs(a[1]-b[1])<1e-7;
+  while(pool.length){
+    let ring=pool.shift(), guard=0;
+    while(!same(ring[0],ring[ring.length-1]) && guard++<5000){
+      const end=ring[ring.length-1]; const i=pool.findIndex(s=>same(s[0],end)||same(s[s.length-1],end)); if(i<0) break;
+      const s=pool.splice(i,1)[0]; ring=ring.concat(same(s[0],end)?s.slice(1):s.reverse().slice(1));
+    }
+    if(ring.length>=4) rings.push(ring);
+  }
+  return rings;
+}
+function readLand(j){
+  const out=[];
+  const push=(tags,rings)=>{ if(rings.length) out.push({tags, rings}); };
+  if(Array.isArray(j.elements)){
+    for(const el of j.elements){
+      if(el.type==="way" && Array.isArray(el.geometry)) push(el.tags||{}, [el.geometry.filter(Boolean).map(p=>[p.lat,p.lon])].filter(r=>r.length>=4));
+      if(el.type==="relation" && Array.isArray(el.members)){
+        const segs=el.members.filter(m=>m.type==="way" && Array.isArray(m.geometry)).map(m=>m.geometry.filter(Boolean).map(p=>[p.lat,p.lon]));
+        push(el.tags||{}, joinRings(segs));
+      }
+    }
+  } else if(j.type==="FeatureCollection"){
+    for(const f of j.features||[]){ const t=f.properties?.tags||f.properties||{}, g=f.geometry; if(!g) continue;
+      const polys = g.type==="Polygon" ? [g.coordinates] : g.type==="MultiPolygon" ? g.coordinates : [];
+      push(t, polys.flat().map(r=>r.map(([lo,la])=>[la,lo]))); }
+  } else throw new Error("That file isn’t OpenStreetMap data. Use one of the download links above and save the whole page.");
+  return out;
+}
+function encodeLand(raw){
+  const areas=[];
+  for(const r of raw){
+    const rings=r.rings.map(ring=>ring.flatMap(([la,lo])=>[Math.round(la*1e5)/1e5, Math.round(lo*1e5)/1e5])).filter(ringNearCircle);
+    if(!rings.length) continue;
+    const t=r.tags||{};
+    areas.push({a:landAgency(t), n:(t.name||"").trim(), op:(t.operator||t.owner||"").trim(), rings});
+  }
+  return {v:1, source:"OpenStreetMap", areas};
+}
+const landDrop=$("landDrop");
+["dragenter","dragover"].forEach(t=>landDrop.addEventListener(t,e=>{e.preventDefault();landDrop.classList.add("over");}));
+["dragleave","drop"].forEach(t=>landDrop.addEventListener(t,e=>{e.preventDefault();landDrop.classList.remove("over");}));
+landDrop.addEventListener("drop",e=>{ const f=e.dataTransfer.files[0]; if(f) importLand(f); });
+$("fLand").onchange=e=>{ const f=e.target.files[0]; if(f) importLand(f); };
+$("landBack").onclick=()=>openPanel("list");
+async function importLand(file){
+  const hint=$("landHint"); hint.className="hint";
+  try{
+    if(!db||!assets) throw new Error("Adding land data needs edit access to this page while signed in.");
+    hint.textContent="Reading the file…";
+    let j; try{ j=JSON.parse(await file.text()); }catch(e){ throw new Error("That file isn’t readable JSON. Save the whole page from the download link and try again."); }
+    if(j.remark && !j.elements?.length) throw new Error("OpenStreetMap was busy and sent no data. Try another server in a minute.");
+    const packed=encodeLand(readLand(j));
+    if(!packed.areas.length) throw new Error("No parks or preserves in that file reach the 3-mile circle.");
+    hint.textContent="Saving…";
+    const up=await assets.upload(new Blob([JSON.stringify(packed)],{type:"application/json"}),{type:"application/json"});
+    const old=landDoc?.id; loadedLandUrl=up.url; landData=packed;
+    await db.doc("settings/land").set({id:up.id, url:up.url, areas:packed.areas.length, source:"OpenStreetMap", updatedAt:new Date().toISOString()});
+    if(old && old!==up.id) assets.delete(old).catch(()=>{});
+    setLayer("land",{on:true}); paintLand(); applyLayer();
+    hint.className="hint ok"; hint.textContent=`Added ${packed.areas.length} parks and preserves.`;
+  }catch(err){ hint.className="err"; hint.textContent = err?.code==="too_large" ? "The land data is too large to save." : (err?.message||String(err)); }
+}
+async function loadLand(d){
+  landDoc=d;
+  if(!d?.url){ loadedLandUrl=null; if(landData){ landData=null; paintLand(); applyLayer(); } return; }
+  if(d.url===loadedLandUrl && landData) return;
+  loadedLandUrl=d.url;
+  try{ const j=await (await fetch(d.url)).json(); if(loadedLandUrl!==d.url) return; landData=j; paintLand(); applyLayer(); }
+  catch(e){ loadedLandUrl=null; }
+}
+async function removeLand(){ const id=landDoc?.id; await db.doc("settings/land").delete(); if(id && assets) assets.delete(id).catch(()=>{}); }
+
+// repaint when the terrain block, the street data or the theme changes
+meshHooks.after.push(()=>{ paintHeat(); paintHistoric(); paintLand(); });
+
 /* ---------- theme ---------- */
-function onTheme(){ paintTerrain(); applyLayer(); syncSelection3D(); }
+function onTheme(){ paintTerrain(); paintHistoric(); paintLand(); applyLayer(); syncSelection3D(); }
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change",onTheme);
 new MutationObserver(onTheme).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
 
@@ -2352,6 +2631,7 @@ onTheme(); render(); requestAnimationFrame(frame);
     onTileDocs(TILESETS.relief, fakeSnap(man.reliefTiles));
     if(man.elevation) loadElevation(man.elevation);
     if(man.streets) loadStreets(man.streets);
+    if(man.land) loadLand(man.land);
     applyLayer();
   }catch(e){ alertErr("The map layers couldn’t be loaded. Check that the data folder was uploaded with the page."); }
   // finds live in Firebase
