@@ -380,15 +380,15 @@ form{display:grid;gap:14px}
         </div>
 
         <div class="lp" id="lpLand" hidden>
-          <h4 class="step">Land management · OpenStreetMap</h4>
+          <h4 class="step">Land management</h4>
           <ol>
-            <li>Open the download from any one of these servers (if one won’t connect or is busy, try the next): <span id="landLinks"></span>. It asks for the park, preserve and watershed boundaries within 3 miles of City Hall.</li>
+            <li>Open <a id="cpadLink" href="#" target="_blank" rel="noopener">this California Protected Areas Database download</a>. It lists every protected parcel around the 3-mile circle with its managing agency (National Park Service, State Parks, Marin Water, Marin County Parks, cities) and public access.</li>
             <li>Save that page as a file (File → Save Page As, or ⌘S).</li>
             <li>Drop the file here.</li>
           </ol>
           <div class="drop" id="landDrop"><span>Drop the saved file, or tap to choose</span><input type="file" id="fLand" aria-label="OpenStreetMap land data file"></div>
           <span class="hint" id="landHint"></span>
-          <p class="hint">If none of them load, open the same search in <a id="landTurbo" href="#" target="_blank" rel="noopener">Overpass Turbo</a>, press Run, then choose Export → GeoJSON → Download. Boundaries come from OpenStreetMap volunteers; treat them as a guide and check each agency’s own maps and rules.</p>
+          <p class="hint">Alternative: OpenStreetMap park boundaries from <span id="landLinks"></span>, or <a id="landTurbo" href="#" target="_blank" rel="noopener">Overpass Turbo</a> (Run, then Export → GeoJSON). OpenStreetMap often drops the largest preserves, so CPAD is the better source. Either way, treat the map as a guide and check each agency’s own maps and rules.</p>
           <div class="row"><button class="btn ghost" type="button" id="landBack">Back</button></div>
         </div>
 
@@ -1218,7 +1218,7 @@ function layerDefs(){
   const s=satLayer(); L.push(s ? {...s, sub:"USGS / USDA aerial imagery"} : {id:"satellite", kind:"satellite", missing:true, name:"Satellite", sub:"Add an aerial image", add:"sat"});
   const r=reliefLayer(); L.push(r ? {...r, sub:"Bare ground at 1 m, trees removed"} : {id:"relief", kind:"relief", missing:true, name:"Lidar relief", sub:"Add 1 m bare-earth relief", add:"relief"});
   historicalLayers().forEach(h=>L.push({...h, sub:h.credit||"Historical map"}));
-  L.push(landData ? {id:"land", kind:"land", name:"Land management", sub:"Who manages each park and preserve", credit:"Land: © OpenStreetMap contributors"}
+  L.push(landData ? {id:"land", kind:"land", name:"Land management", sub:"Who manages each park and preserve", credit: landData.source==="CPAD" ? "Land: California Protected Areas Database (calands.org)" : "Land: © OpenStreetMap contributors"}
                   : {id:"land", kind:"land", missing:true, name:"Land management", sub:"Add park and preserve boundaries", add:"land"});
   L.push({id:"heat", kind:"heat", name:"Find density", sub:"Where finds cluster; follows your filters"});
   L.push({id:"contours", kind:"contours", name:"Contour lines", sub:"Every 100 ft, bold every 500 ft"});
@@ -2406,6 +2406,15 @@ const LAND_AGENCIES = {
 };
 const LAND_ORDER = ["federal","state","water","county","other","city"]; // later ones paint on top
 function landAgency(t){
+  const lev=String(t.MNG_AG_LEV||"").toLowerCase(), mng=String(t.MNG_AGNCY||t.AGNCY_NAME||"").toLowerCase();
+  if(lev){ // California Protected Areas Database
+    if(lev==="federal") return "federal";
+    if(lev==="state") return "state";
+    if(/water/.test(mng)) return "water";
+    if(lev==="county" || /open space district|county/.test(mng)) return "county";
+    if(lev==="city") return "city";
+    return "other";
+  }
   const s=[t.operator,t.owner,t["operator:short"],t.name,t.designation,t.protection_title].filter(Boolean).join(" | ").toLowerCase();
   if(/national park service|\bnps\b|golden gate national|muir woods|national monument|national recreation area/.test(s)) return "federal";
   if(/california (department of parks|state parks)|state park/.test(s)) return "state";
@@ -2426,7 +2435,7 @@ function paintLand(){
     g.beginPath();
     for(const ring of ar.rings){ for(let i=0;i<ring.length;i+=2){ const [x,y]=demPx(ring[i],ring[i+1],W,H); i?g.lineTo(x,y):g.moveTo(x,y); } g.closePath(); }
     g.globalAlpha=0.5; g.fillStyle=col; g.fill("evenodd");
-    g.globalAlpha=1; g.lineWidth=2; g.strokeStyle=col; g.stroke();
+    if(ar.src!=="cpad"){ g.globalAlpha=1; g.lineWidth=2; g.strokeStyle=col; g.stroke(); }
   }
   g.globalAlpha=1; landTexture.needsUpdate=true;
   renderLandKey();
@@ -2458,7 +2467,7 @@ function identifyLand(ev){
   if(!(stateOf("land","land").on && landData)) return false;
   const ll=groundHit(ray); if(!ll) return false;
   const ar=landAt(ll[0],ll[1]); const tip=$("tip"), r=renderer.domElement.getBoundingClientRect();
-  tip.innerHTML = ar ? `<b>${esc(ar.n||LAND_AGENCIES[ar.a].label)}</b><span>${esc(ar.op || LAND_AGENCIES[ar.a].label)}</span>` : `<b>Not public parkland</b><span>Private land, streets or unmapped</span>`;
+  tip.innerHTML = ar ? `<b>${esc(ar.n||LAND_AGENCIES[ar.a].label)}</b><span>${esc([ar.op || LAND_AGENCIES[ar.a].label, ar.ac].filter(Boolean).join(" · "))}</span>` : `<b>Not public parkland</b><span>Private land, streets or unmapped</span>`;
   tip.style.left=(ev.clientX-r.left)+"px"; tip.style.top=(ev.clientY-r.top)+"px"; tip.hidden=false;
   clearTimeout(landTipTimer); landTipTimer=setTimeout(()=>{ if(!hoverId) tip.hidden=true; },3500);
   return true;
@@ -2468,6 +2477,11 @@ function identifyLand(ev){
 const LAND_Q = `[out:json][timeout:180];(relation["boundary"~"^(protected_area|national_park)$"](around:4900,${CLAT},${CLON});way["boundary"~"^(protected_area|national_park)$"](around:4900,${CLAT},${CLON});relation["leisure"~"^(park|nature_reserve)$"](around:4900,${CLAT},${CLON});way["leisure"~"^(park|nature_reserve)$"](around:4900,${CLAT},${CLON}););out tags geom;`;
 $("landLinks").innerHTML = OSM_SERVERS.map(([n,u])=>`<a href="${esc(u+"?data="+encodeURIComponent(LAND_Q))}" target="_blank" rel="noopener">${esc(n)}</a>`).join(", ");
 $("landTurbo").href = "https://overpass-turbo.eu/?Q="+encodeURIComponent(LAND_Q)+"&R";
+// California Protected Areas Database: protected parcels touching the circle's bounding box, simplified to ~3 m
+$("cpadLink").href = "https://services1.arcgis.com/4ZKi1B1zTblbwgWB/ArcGIS/rest/services/CPAD_Holdings_Current_Release/FeatureServer/0/query?" + new URLSearchParams({
+  where:"1=1", geometry:"-122.603,37.863,-122.492,37.951", geometryType:"esriGeometryEnvelope", inSR:"4326", spatialRel:"esriSpatialRelIntersects",
+  outFields:"UNIT_NAME,MNG_AGNCY,MNG_AG_LEV,AGNCY_NAME,ACCESS_TYP", returnGeometry:"true", outSR:"4326", maxAllowableOffset:"0.00003", geometryPrecision:"6",
+  resultRecordCount:"2000", f:"geojson"}).toString();
 function joinRings(segs){ // join open ways into closed rings by matching endpoints
   const rings=[], pool=segs.map(s=>s.slice()), same=(a,b)=>Math.abs(a[0]-b[0])<1e-7 && Math.abs(a[1]-b[1])<1e-7;
   while(pool.length){
@@ -2504,9 +2518,9 @@ function encodeLand(raw){
     const rings=r.rings.map(ring=>ring.flatMap(([la,lo])=>[Math.round(la*1e5)/1e5, Math.round(lo*1e5)/1e5])).filter(ringNearCircle);
     if(!rings.length) continue;
     const t=r.tags||{};
-    areas.push({a:landAgency(t), n:(t.name||"").trim(), op:(t.operator||t.owner||"").trim(), rings});
+    areas.push({a:landAgency(t), n:String(t.UNIT_NAME||t.name||"").trim(), op:String(t.MNG_AGNCY||t.operator||t.owner||"").trim(), ac:String(t.ACCESS_TYP||"").trim(), src:t.MNG_AG_LEV?"cpad":"osm", rings});
   }
-  return {v:1, source:"OpenStreetMap", areas};
+  return {v:1, source: areas.some(a=>a.src==="cpad") ? "CPAD" : "OpenStreetMap", areas};
 }
 const landDrop=$("landDrop");
 ["dragenter","dragover"].forEach(t=>landDrop.addEventListener(t,e=>{e.preventDefault();landDrop.classList.add("over");}));
@@ -2521,15 +2535,18 @@ async function importLand(file){
     hint.textContent="Reading the file…";
     let j; try{ j=JSON.parse(await file.text()); }catch(e){ throw new Error("That file isn’t readable JSON. Save the whole page from the download link and try again."); }
     if(j.remark && !j.elements?.length) throw new Error("OpenStreetMap was busy and sent no data. Try another server in a minute.");
+    if(j.error) throw new Error("The CPAD server sent an error instead of data: "+(j.error.message||"unknown error")+". Try the link again in a minute.");
+    const partial = !!j.remark;
     const packed=encodeLand(readLand(j));
     if(!packed.areas.length) throw new Error("No parks or preserves in that file reach the 3-mile circle.");
     hint.textContent="Saving…";
     const up=await assets.upload(new Blob([JSON.stringify(packed)],{type:"application/json"}),{type:"application/json"});
     const old=landDoc?.id; loadedLandUrl=up.url; landData=packed;
-    await db.doc("settings/land").set({id:up.id, url:up.url, areas:packed.areas.length, source:"OpenStreetMap", updatedAt:new Date().toISOString()});
+    await db.doc("settings/land").set({id:up.id, url:up.url, areas:packed.areas.length, source:packed.source, updatedAt:new Date().toISOString()});
     if(old && old!==up.id) assets.delete(old).catch(()=>{});
     setLayer("land",{on:true}); paintLand(); applyLayer();
-    hint.className="hint ok"; hint.textContent=`Added ${packed.areas.length} parks and preserves.`;
+    hint.className = partial ? "err" : "hint ok";
+    hint.textContent = `Added ${packed.areas.length} ${packed.source==="CPAD"?"protected-land parcels from CPAD":"parks and preserves"}.` + (partial ? " The server stopped before sending everything, so some large preserves may be missing. Try the CPAD download instead." : "");
   }catch(err){ hint.className="err"; hint.textContent = err?.code==="too_large" ? "The land data is too large to save." : (err?.message||String(err)); }
 }
 async function loadLand(d){
