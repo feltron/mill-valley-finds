@@ -101,6 +101,15 @@ button,input,select,textarea{font:inherit;color:inherit}
 .slabel.major{font-size:12px;font-weight:700}
 .slabel.trail{color:var(--sl-trail);font-style:italic;font-weight:500}
 .slabel.oldrail{color:var(--sl-oldrail);font-style:italic}
+.slabel.hist{color:var(--hist-ink)}
+.hsite{position:absolute;left:0;top:0;width:0;height:0}
+.hsite i{position:absolute;left:-5px;top:-5px;width:6px;height:6px;border-radius:50%;background:var(--hist-ink);border:2px solid var(--sl-halo);box-shadow:0 0 0 1px var(--hist-ink)}
+.hsite .slabel{position:absolute;left:auto;top:auto;line-height:1.15}
+.hsite .slabel small{display:block;font-weight:500;font-size:10px;opacity:.8}
+.hsite.at-r .slabel{left:9px;top:0;transform:translateY(-50%)}
+.hsite.at-l .slabel{right:9px;top:0;transform:translateY(-50%);text-align:right}
+.hsite.at-t .slabel{bottom:9px;left:0;transform:translateX(-50%);text-align:center}
+.hsite.at-b .slabel{top:9px;left:0;transform:translateX(-50%);text-align:center}
 #lbName{display:block}
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px}
 .pgrid:empty{display:none}
@@ -840,7 +849,7 @@ function frame(now){
   controls.update();
   renderer.render(scene,camera);
   for(const p of placeEls){ const [x,y,z]=project(p.w); p.el.style.transform=`translate(${x}px,${y}px) translate(-50%,-100%)`; p.el.style.display=z<1?"":"none"; p.el.style.left="0"; p.el.style.top="0"; }
-  updateStreets();
+  updateStreets(updateHistoric());
   if(hoverId){ const m=markers.find(m=>m.id===hoverId); if(m){ const [x,y]=project(m.head.position); tipEl.style.left=x+"px"; tipEl.style.top=y+"px"; } }
   requestAnimationFrame(frame);
 }
@@ -1299,6 +1308,7 @@ function applyLayer(opts={}){
       const o=overlayFor(d.kind, d.kind!=="elev"); used.add(d.kind);
       if(o.mat.map!==painted){ o.mat.map = painted; o.mat.needsUpdate=true; }
       o.mat.opacity=st.op; o.mesh.visible=on; if(on) setDepthOrder(o.mesh,o.mat,k++);
+      if(d.kind==="historic") histLabelEl.hidden = !on || st.op<0.3;
       continue;
     }
     if(d.kind==="relief"){ tileOrder.relief={on, op:st.op, k}; if(on) k++; continue; }
@@ -2201,15 +2211,15 @@ function syncStreets(){
   streetLabelEl.hidden = !on || streetsOrder.op<0.3;
 }
 const _sv=new THREE.Vector3();
-function updateStreets(){ // per frame: keep line widths in screen pixels and place visible name labels without overlaps
+function updateStreets(boxes=[]){ // per frame: keep line widths in screen pixels and place visible name labels without overlaps
   if(!streetFill.visible) return;
   const s=2*Math.tan(camera.fov*Math.PI/360)/Math.max(1,renderer.domElement.clientHeight);
   streetCasingMat.uniforms.uPxScale.value=streetFillMat.uniforms.uPxScale.value=s;
   if(streetLabelEl.hidden) return;
-  const W=renderer.domElement.clientWidth, H=renderer.domElement.clientHeight, boxes=[];
+  const W=renderer.domElement.clientWidth, H=renderer.domElement.clientHeight, n0=boxes.length;
   for(const L of streetLabels){
     let show=false, x=0, y=0;
-    if(camera.position.distanceTo(L.w)<=L.reach && boxes.length<70){
+    if(camera.position.distanceTo(L.w)<=L.reach && boxes.length-n0<70){
       _sv.copy(L.w).project(camera);
       if(_sv.z<1 && Math.abs(_sv.x)<1.05 && Math.abs(_sv.y)<1.05){
         x=(_sv.x+1)/2*W; y=(1-_sv.y)/2*H;
@@ -2364,36 +2374,49 @@ function paintHistoric(){
     if(rule[2]){ const L=wayLen(w); if(!best.has(rule[2]) || L>best.get(rule[2]).L) best.set(rule[2],{w,L}); }
   }
   g.setLineDash([]);
-  for(const [text,{w}] of best){ // label along the middle of the longest stretch
-    const n=w.pts.length/2, m=Math.max(1,Math.floor(n/2))*2, i0=Math.max(0,m-4), i1=Math.min(w.pts.length-2,m+4);
-    const [ax,ay]=demPx(w.pts[i0],w.pts[i0+1],W,H), [bx,by]=demPx(w.pts[i1],w.pts[i1+1],W,H), [cx,cy]=demPx(w.pts[m],w.pts[m+1],W,H);
-    let ang=Math.atan2(by-ay,bx-ax); if(ang>Math.PI/2) ang-=Math.PI; if(ang<-Math.PI/2) ang+=Math.PI;
-    g.save(); g.translate(cx,cy); g.rotate(ang);
-    g.font=`italic ${Math.round(Math.max(11,34*ppm))}px "Iowan Old Style","Palatino","Georgia",serif`; g.textAlign="center"; g.textBaseline="bottom";
-    g.lineWidth=Math.max(3,9*ppm); g.strokeStyle=halo; g.strokeText(text,0,-Math.max(4,12*ppm)); g.fillStyle=ink; g.fillText(text,0,-Math.max(4,12*ppm));
-    g.restore();
-  }
-  g.setLineDash([]);
-  // sites
-  const fs=Math.round(Math.max(12,40*ppm)), fs2=Math.round(fs*0.74), r=Math.max(5,16*ppm);
-  for(const s of HISTORIC_SITES){
-    const [x,y]=demPx(s.lat,s.lon,W,H);
-    g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fillStyle=halo; g.fill(); g.lineWidth=Math.max(1.5,5*ppm); g.strokeStyle=ink; g.stroke();
-    g.beginPath(); g.arc(x,y,r*0.38,0,Math.PI*2); g.fillStyle=ink; g.fill();
-    const gap=r+Math.max(3,10*ppm);
-    let tx=x, ty=y, align="left", base="middle";
-    if(s.at==="r"){ tx=x+gap; } else if(s.at==="l"){ tx=x-gap; align="right"; } else if(s.at==="t"){ ty=y-gap-fs2; align="center"; base="bottom"; } else { ty=y+gap; align="center"; base="top"; }
-    g.textAlign=align; g.textBaseline=base; g.lineWidth=Math.max(3,12*ppm); g.strokeStyle=halo; g.fillStyle=ink;
-    const name=s.n+(s.approx?" (approx.)":"");
-    g.font=`italic 600 ${fs}px "Iowan Old Style","Palatino","Georgia",serif`;
-    const y1 = base==="middle" ? ty-fs2*0.55 : ty;
-    g.strokeText(name,tx,y1); g.fillText(name,tx,y1);
-    g.font=`${fs2}px "Iowan Old Style","Palatino","Georgia",serif`; g.textBaseline = base==="bottom" ? "top" : "top";
-    const y2 = base==="middle" ? y1+fs*0.62 : base==="bottom" ? ty+2 : ty+fs*1.05;
-    g.strokeText(s.y,tx,y2); g.fillText(s.y,tx,y2);
-  }
   histTexture.needsUpdate=true;
+  buildHistLabels(best);
 }
+/* historic labels: screen-space text styled like the street names, so it stays the same size at any zoom */
+const histLabelEl=document.createElement("div"); histLabelEl.className="slabels"; histLabelEl.hidden=true; $("labels").appendChild(histLabelEl);
+let histLabels=[];
+function buildHistLabels(best){
+  histLabelEl.textContent=""; histLabels=[];
+  for(const s of HISTORIC_SITES){
+    const el=document.createElement("div"); el.className="hsite at-"+s.at;
+    const name=s.n+(s.approx?" (approx.)":"");
+    el.innerHTML=`<i></i><div class="slabel hist">${esc(name)}<small>${esc(s.y)}</small></div>`;
+    el.style.display="none"; histLabelEl.appendChild(el);
+    const [x,z]=ll2xz(s.lat,s.lon), tw=Math.max(name.length*6.3, s.y.length*5.6)+6, th=28;
+    const box = s.at==="r" ? [9,-th/2,9+tw,th/2] : s.at==="l" ? [-9-tw,-th/2,-9,th/2] : s.at==="t" ? [-tw/2,-9-th,tw/2,-9] : [-tw/2,9,tw/2,9+th];
+    histLabels.push({el, txt:el.querySelector(".slabel"), site:true, w:new THREE.Vector3(x, meshY(x,z)+0.004, z), box, shown:false, txtShown:true});
+  }
+  for(const [text,{w}] of best){ // rail grade names, on the middle of the longest stretch
+    const m=Math.max(1,Math.floor(w.pts.length/4))*2, [x,z]=ll2xz(w.pts[m],w.pts[m+1]);
+    const el=document.createElement("div"); el.className="slabel oldrail hist"; el.textContent=text; el.style.display="none"; histLabelEl.appendChild(el);
+    const tw=text.length*6.3+10;
+    histLabels.push({el, w:new THREE.Vector3(x, meshY(x,z)+0.004, z), box:[-tw/2,-9,tw/2,9], shown:false});
+  }
+}
+function updateHistoric(){ // per frame: returns the screen boxes it used, so street names avoid them
+  const boxes=[]; if(histLabelEl.hidden) return boxes;
+  const W=renderer.domElement.clientWidth, H=renderer.domElement.clientHeight;
+  for(const L of histLabels){
+    let show=false, x=0, y=0;
+    _sv.copy(L.w).project(camera);
+    if(_sv.z<1 && Math.abs(_sv.x)<1.05 && Math.abs(_sv.y)<1.05){ x=(_sv.x+1)/2*W; y=(1-_sv.y)/2*H; show=true; }
+    if(show){
+      const b=[x+L.box[0], y+L.box[1], x+L.box[2], y+L.box[3]];
+      const fits=!boxes.some(o=>b[0]<o[2]&&b[2]>o[0]&&b[1]<o[3]&&b[3]>o[1]);
+      if(L.site){ boxes.push([x-6,y-6,x+6,y+6]); if(fits) boxes.push(b); if(fits!==L.txtShown){ L.txt.style.display=fits?"":"none"; L.txtShown=fits; } }
+      else if(fits) boxes.push(b); else show=false;
+    }
+    if(show){ L.el.style.transform = L.site ? `translate(${x}px,${y}px)` : `translate(${x}px,${y}px) translate(-50%,-50%)`; if(!L.shown){ L.el.style.display=""; L.shown=true; } }
+    else if(L.shown){ L.el.style.display="none"; L.shown=false; }
+  }
+  return boxes;
+}
+
 
 /* land management: who manages each piece of public land (OpenStreetMap park and preserve boundaries) */
 const LAND_AGENCIES = {
