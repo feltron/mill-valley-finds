@@ -629,13 +629,105 @@
   "source": "CPAD",
   "areas": 266
  },
- "clues": {
-  "url": "data/clues.png",
-  "bbox": {
-   "west": -122.604,
-   "east": -122.4915,
-   "south": 37.862,
-   "north": 37.953
+ "cluesTiles": {
+  "r0c0": {
+   "url": "data/clues/r0c0.png",
+   "bbox": {
+    "west": -122.60369999999999,
+    "east": -122.56530000000001,
+    "north": 37.95155,
+    "south": 37.92111666666667
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r0c1": {
+   "url": "data/clues/r0c1.png",
+   "bbox": {
+    "west": -122.5667,
+    "east": -122.5283,
+    "north": 37.95155,
+    "south": 37.92111666666667
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r0c2": {
+   "url": "data/clues/r0c2.png",
+   "bbox": {
+    "west": -122.52969999999999,
+    "east": -122.49130000000001,
+    "north": 37.95155,
+    "south": 37.92111666666667
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r1c0": {
+   "url": "data/clues/r1c0.png",
+   "bbox": {
+    "west": -122.60369999999999,
+    "east": -122.56530000000001,
+    "north": 37.922216666666664,
+    "south": 37.891783333333336
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r1c1": {
+   "url": "data/clues/r1c1.png",
+   "bbox": {
+    "west": -122.5667,
+    "east": -122.5283,
+    "north": 37.922216666666664,
+    "south": 37.891783333333336
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r1c2": {
+   "url": "data/clues/r1c2.png",
+   "bbox": {
+    "west": -122.52969999999999,
+    "east": -122.49130000000001,
+    "north": 37.922216666666664,
+    "south": 37.891783333333336
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r2c0": {
+   "url": "data/clues/r2c0.png",
+   "bbox": {
+    "west": -122.60369999999999,
+    "east": -122.56530000000001,
+    "north": 37.89288333333333,
+    "south": 37.86245
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r2c1": {
+   "url": "data/clues/r2c1.png",
+   "bbox": {
+    "west": -122.5667,
+    "east": -122.5283,
+    "north": 37.89288333333333,
+    "south": 37.86245
+   },
+   "width": 3400,
+   "height": 2695
+  },
+  "r2c2": {
+   "url": "data/clues/r2c2.png",
+   "bbox": {
+    "west": -122.52969999999999,
+    "east": -122.49130000000001,
+    "north": 37.89288333333333,
+    "south": 37.86245
+   },
+   "width": 3400,
+   "height": 2695
   }
  }
 }

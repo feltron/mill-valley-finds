@@ -1231,7 +1231,7 @@ function layerDefs(){
   L.push(landData ? {id:"land", kind:"land", name:"Land management", sub:"Who manages each park and preserve", credit: landData.source==="CPAD" ? "Land: California Protected Areas Database (calands.org)" : "Land: © OpenStreetMap contributors"}
                   : {id:"land", kind:"land", missing:true, name:"Land management", sub:"Add park and preserve boundaries", add:"land"});
   L.push({id:"heat", kind:"heat", name:"Find density", sub:"Where finds cluster; follows your filters"});
-  if(cluesImg) L.push({id:"clues", kind:"clues", name:"Terrain clues", sub:"Graded ground from lidar: pads, terraces, cuts", credit:"Terrain clues: derived from USGS 3DEP lidar"});
+  if(setHasTiles(TILESETS.clues)) L.push({id:"clues", kind:"clues", name:"Terrain clues", sub:"Graded ground from 1 m lidar: pads, terraces, cuts", credit:"Terrain clues: derived from USGS 3DEP 1 m lidar"});
   L.push({id:"contours", kind:"contours", name:"Contour lines", sub:"Every 100 ft, bold every 500 ft"});
   L.push({id:"historic", kind:"historic", name:"Historic sites", sub:"Inns, mills, depots and rail grades", credit:"Historic sites: HMDB, NPS, Friends of Mt. Tam"});
   L.push(streetData ? {id:"streets", kind:"streets", name:"Streets & trails", sub:"Roads, trails and old rail grades", credit:"Streets: © OpenStreetMap contributors"}
@@ -1305,7 +1305,7 @@ function applyLayer(opts={}){
   for(const d of stack){
     const st = d.isPreview ? {on:true, op:preview.op} : stateOf(d.id, d.kind), on = st.on && st.op>0;
     if(st.on && !d.isPreview) onCount++;
-    const painted={elev:texture, contours:lineTexture, heat:heatTexture, historic:histTexture, land:landTexture, clues:cluesTexture}[d.kind];
+    const painted={elev:texture, contours:lineTexture, heat:heatTexture, historic:histTexture, land:landTexture}[d.kind];
     if(painted){
       const o=overlayFor(d.kind, d.kind!=="elev"); used.add(d.kind);
       if(o.mat.map!==painted){ o.mat.map = painted; o.mat.needsUpdate=true; }
@@ -1314,6 +1314,7 @@ function applyLayer(opts={}){
       continue;
     }
     if(d.kind==="relief"){ tileOrder.relief={on, op:st.op, k}; if(on) k++; continue; }
+    if(d.kind==="clues"){ tileOrder.clues={on, op:st.op, k}; if(on) k++; continue; }
     if(d.kind==="streets"){ streetsOrder={on, op:st.op, k}; if(on) k++; continue; }
     // image layers: satellite base image, historical maps, a map being aligned
     const key=d.isPreview ? "preview" : d.id; used.add(key);
@@ -1329,6 +1330,7 @@ function applyLayer(opts={}){
     }).catch(()=>{ o.mesh.visible=false; });
   }
   if(!stack.some(d=>d.kind==="relief")) tileOrder.relief={on:false};
+  if(!stack.some(d=>d.kind==="clues")) tileOrder.clues={on:false};
   if(!stack.some(d=>d.kind==="satellite")) tileOrder.satellite={on:false};
   if(!stack.some(d=>d.kind==="streets")) streetsOrder={on:false};
   overlayPool.forEach((o,key)=>{ if(!used.has(key)) dropOverlay(key); });
@@ -1337,7 +1339,7 @@ function applyLayer(opts={}){
   stemMat.color.set(satOn ? "#ffffff" : cssVar("--ink"));
   $("elevLegend").hidden = !stateOf("elev","elev").on;
   $("landKey").hidden = !(landData && stateOf("land","land").on);
-  $("cluesKey").hidden = !(cluesImg && stateOf("clues","clues").on);
+  $("cluesKey").hidden = !(setHasTiles(TILESETS.clues) && stateOf("clues","clues").on);
   $("layerBtnLabel").textContent = onCount;
   // corner badge: the topmost visible historical map, plus credits for what's showing
   const vis = stack.filter(d=>d.isPreview || stateOf(d.id,d.kind).on);
@@ -1951,6 +1953,8 @@ const TILESETS = {
     url:c=>`https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPPlus/ImageServer/exportImage?${bboxParam(c.bbox)}&format=jpg&f=image`},
   relief:{key:"relief", coll:"reliefTiles", grid:"reliefGrid", count:"reliefCount", hint:"reliefHint", panel:"lpRelief", order:2, tiles:new Map(),
     url:c=>`https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?${bboxParam(c.bbox)}&format=jpg&renderingRule=${encodeURIComponent('{"rasterFunction":"Hillshade Multidirectional"}')}&f=image`},
+  // precomputed from USGS 1 m lidar DEM tiles (graded benches + sharp slope breaks), transparent PNGs on the same 3×3 grid
+  clues:{key:"clues", coll:"cluesTiles", order:2, tiles:new Map(), url:()=>"#"},
 };
 // USGS keeps pixels square in degrees: when the image's aspect doesn't match the requested bbox, it widens the short side around the center.
 function tileExtent(cell, w, h){
@@ -1986,7 +1990,7 @@ meshHooks.after.push(()=>{ eachTile(t=>{ if(t.mesh){ t.mesh.geometry=cellGeo(t.c
 
 function setHasTiles(S){ return [...S.tiles.values()].some(t=>t.doc?.url); }
 function setAllReady(S){ return CELLS.every(c=>S.tiles.get(c.id)?.ready); }
-const tileOrder = {satellite:{on:false}, relief:{on:false}}; // filled in by applyLayer
+const tileOrder = {satellite:{on:false}, relief:{on:false}, clues:{on:false}}; // filled in by applyLayer
 function syncTiles(){
   Object.values(TILESETS).forEach(S=>{
     const info=tileOrder[S.key]||{on:false};
@@ -2036,7 +2040,7 @@ function onTileDocs(S, snap){
 /* tile grids in the satellite and relief panels */
 function renderTileGrid(){
   Object.values(TILESETS).forEach(S=>{
-    const el=$(S.grid); if(!el || $(S.panel).hidden) return;
+    const el=S.grid && $(S.grid); if(!el || $(S.panel).hidden) return;
     el.innerHTML=CELLS.map(c=>{ const t=S.tiles.get(c.id), st=t?.failed?"Couldn’t load":t?.ready?"Added ✓":t?.doc?"Saved ✓":"";
       return `<div class="tcell${t?.doc?" done":""}" data-id="${c.id}">
         <span class="tn">${c.n}</span>
@@ -2048,7 +2052,7 @@ function renderTileGrid(){
   });
 }
 Object.values(TILESETS).forEach(S=>{
-  const g=$(S.grid);
+  const g=S.grid && $(S.grid); if(!g) return;
   g.addEventListener("change",e=>{ const cell=e.target.closest(".tcell"); const f=e.target.files?.[0]; if(cell&&f) importTile(S,cell.dataset.id,f); });
   ["dragenter","dragover"].forEach(t=>g.addEventListener(t,e=>{ const c=e.target.closest(".tcell"); if(c){ e.preventDefault(); c.classList.add("over"); } }));
   ["dragleave","drop"].forEach(t=>g.addEventListener(t,e=>{ const c=e.target.closest(".tcell"); if(c){ e.preventDefault(); c.classList.remove("over"); } }));
@@ -2590,24 +2594,7 @@ async function loadLand(d){
 async function removeLand(){ const id=landDoc?.id; await db.doc("settings/land").delete(); if(id && assets) assets.delete(id).catch(()=>{}); }
 
 // repaint when the terrain block, the street data or the theme changes
-/* terrain clues: a precomputed overlay from the 2.5 m lidar elevation (see README) — level benches on steep
-   ground and abrupt slope breaks, the signatures of grading for roads, house pads, terraces and platforms */
-const [cluesCanvas, cluesTexture] = makeCanvasTex();
-let cluesImg=null, cluesMeta=null, loadedCluesUrl=null;
-function paintClues(){
-  const [W,H]=demCanvasSize(IS_SMALL?2048:4096); cluesCanvas.width=W; cluesCanvas.height=H;
-  const g=cluesCanvas.getContext("2d"); g.clearRect(0,0,W,H);
-  if(cluesImg && cluesMeta){ const b=cluesMeta.bbox, [x0,y0]=demPx(b.north,b.west,W,H), [x1,y1]=demPx(b.south,b.east,W,H); g.imageSmoothingEnabled=true; g.drawImage(cluesImg,x0,y0,x1-x0,y1-y0); }
-  cluesTexture.needsUpdate=true;
-}
-async function loadClues(d){
-  if(!d?.url){ loadedCluesUrl=null; if(cluesImg){ cluesImg=null; paintClues(); applyLayer(); } return; }
-  if(d.url===loadedCluesUrl && cluesImg) return;
-  loadedCluesUrl=d.url;
-  try{ const img=new Image(); img.src=d.url; await img.decode(); if(loadedCluesUrl!==d.url) return; cluesImg=img; cluesMeta=d; paintClues(); applyLayer(); }
-  catch(e){ loadedCluesUrl=null; }
-}
-meshHooks.after.push(()=>{ paintHeat(); paintHistoric(); paintLand(); paintClues(); });
+meshHooks.after.push(()=>{ paintHeat(); paintHistoric(); paintLand(); });
 
 /* ---------- theme ---------- */
 function onTheme(){ paintTerrain(); paintHistoric(); paintLand(); applyLayer(); syncSelection3D(); }
@@ -2696,7 +2683,7 @@ onTheme(); render(); requestAnimationFrame(frame);
     if(man.elevation) loadElevation(man.elevation);
     if(man.streets) loadStreets(man.streets);
     if(man.land) loadLand(man.land);
-    if(man.clues) loadClues(man.clues);
+    if(man.cluesTiles) onTileDocs(TILESETS.clues, fakeSnap(man.cluesTiles));
     applyLayer();
   }catch(e){ alertErr("The map layers couldn’t be loaded. Check that the data folder was uploaded with the page."); }
   // finds live in Firebase
