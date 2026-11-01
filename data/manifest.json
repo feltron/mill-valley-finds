@@ -628,5 +628,14 @@
   "url": "data/land.json",
   "source": "CPAD",
   "areas": 266
+ },
+ "clues": {
+  "url": "data/clues.png",
+  "bbox": {
+   "west": -122.604,
+   "east": -122.4915,
+   "south": 37.862,
+   "north": 37.953
+  }
  }
 }
