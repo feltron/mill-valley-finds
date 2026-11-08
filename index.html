@@ -1174,7 +1174,7 @@ $("form").onsubmit=async e=>{
     const removed=photosOf(prev).filter(p=>p.id && !photos.some(q=>q.id===p.id));
     let id=editing;
     if(editing) await db.doc("finds/"+editing).set({...data, createdAt:prev?.createdAt||data.updatedAt});
-    else { const ref=await db.collection("finds").add({...data, createdAt:data.updatedAt}); id=ref.id; }
+    else { const ref=await db.collection("finds").add({...data, createdAt:data.updatedAt}); id=ref.id; notifyNewFind(id,data); }
     if(assets) removed.forEach(p=>assets.delete(p.id).catch(()=>{}));
     try{ if(finder) localStorage.setItem("mvf-finder",finder); }catch(e3){}
     closeForm(); selected=id; setTimeout(()=>{ const f=finds.find(f=>f.id===id); if(f) select(id); },300);
@@ -2639,6 +2639,15 @@ async function photoData(id){
 }
 function fillPhotos(root){ // swap in full photos for <img data-photo="id">
   root.querySelectorAll("img[data-photo]").forEach(img=>{ const id=img.dataset.photo; img.removeAttribute("data-photo"); photoData(id).then(v=>{ if(v) img.src=v; }).catch(()=>{}); });
+}
+
+/* email the owner about new finds: posts to a Google Apps Script web app set in config.js (NOTIFY_URL, NOTIFY_KEY).
+   Finds the owner adds while signed in don't send an email. */
+function notifyNewFind(id, f){
+  const url=window.NOTIFY_URL; if(!url || isOwnerUser) return;
+  const body={key:window.NOTIFY_KEY||"", id, name:f.name, category:f.category, age:f.age, foundOn:f.foundOn, place:f.place,
+    finder:f.finder, notes:f.notes, link:f.link, lat:f.lat, lon:f.lon, photos:(f.photos||[]).length};
+  try{ fetch(url,{method:"POST", mode:"no-cors", keepalive:true, headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(body)}).catch(()=>{}); }catch(e){}
 }
 
 /* passcode unlock + owner sign-in */

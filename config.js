@@ -6,3 +6,7 @@ window.FIREBASE_CONFIG = {
   projectId: "mill-valley-finds",
   appId: "1:829927336846:web:c9e518367602a0b6bb92df",
 };
+
+// Email when someone adds a find (optional; see notify/README.md). Paste your Apps Script web app URL between the quotes.
+window.NOTIFY_URL = "";
+window.NOTIFY_KEY = "-qmKljFuDQuRoR7MmXHe9Ubg";
