@@ -8,5 +8,5 @@ window.FIREBASE_CONFIG = {
 };
 
 // Email when someone adds a find (optional; see notify/README.md). Paste your Apps Script web app URL between the quotes.
-window.NOTIFY_URL = "";
+window.NOTIFY_URL = "https://script.google.com/macros/s/AKfycbyOkGKPouFqSa85t_wTxU-bnqtzIGUwiPhwtimkB0Ou862k7ev88fKVPSqrcXCLe1k0/exec";
 window.NOTIFY_KEY = "-qmKljFuDQuRoR7MmXHe9Ubg";
