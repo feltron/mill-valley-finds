@@ -4,7 +4,7 @@
  * The map posts here each time someone logs a find; this sends you an email from your own Gmail.
  */
 const KEY  = "-qmKljFuDQuRoR7MmXHe9Ubg";                                // must match NOTIFY_KEY in config.js
-const TO   = Session.getEffectiveUser().getEmail();  // the Google account that deploys this script
+const TO   = "nicholas@feltron.com";                 // where notifications go
 const SITE = "https://feltron.github.io/mill-valley-finds/";
 const MAX_PER_HOUR = 30;                             // stops a flood if the page is ever abused
 
@@ -43,6 +43,7 @@ function doPost(e) {
     "</table>" +
     '<p style="margin:16px 0 0"><a href="' + SITE + '" style="color:#A8682A;font-weight:600">Open Mill Valley Finds</a></p></div>';
 
+  Logger.log("Sending to " + TO + " (" + MailApp.getRemainingDailyQuota() + " emails left today)");
   MailApp.sendEmail({
     to: TO,
     name: "Mill Valley Finds",
