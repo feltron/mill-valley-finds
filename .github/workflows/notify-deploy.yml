@@ -1,0 +1,21 @@
+# Emails everyone on the notification list (notify/Code.gs) when changes are pushed to the site.
+# It reuses the Apps Script web app and key already in config.js, so there's nothing else to set up.
+name: Email on site update
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tell the notification script about this update
+        run: |
+          URL=$(sed -n 's/^window.NOTIFY_URL *= *"\(.*\)";.*/\1/p' config.js)
+          KEY=$(sed -n 's/^window.NOTIFY_KEY *= *"\(.*\)";.*/\1/p' config.js)
+          if [ -z "$URL" ]; then echo "No NOTIFY_URL in config.js; skipping."; exit 0; fi
+          jq -c --arg key "$KEY" '{key:$key, type:"deploy", compare:.compare,
+              commits:[.commits[] | {message, url, author:.author.name}]}' "$GITHUB_EVENT_PATH" > payload.json
+          curl -sS -L --max-time 60 -H "Content-Type: text/plain;charset=utf-8" --data @payload.json "$URL"; echo
