@@ -9,3 +9,7 @@ The map can email you each time someone logs a new find. It uses a small Google 
 5. In `config.js`, paste it between the quotes of `window.NOTIFY_URL = "";` and commit.
 
 Finds you add while signed in as the owner don't send an email; finds added with the passcode do. To stop the emails, empty `NOTIFY_URL` in `config.js`. If you change `Code.gs` later, use **Deploy → Manage deployments → Edit → New version** so the URL stays the same.
+
+## Site update emails
+
+`.github/workflows/notify-deploy.yml` runs on every push to `main` and sends the list of changes to the same script, which emails everyone in `TO`. It reads the script's URL and key from `config.js`, so it needs no other setup. To push without sending an email, put `[skip ci]` in the commit message. To add or remove people, edit `TO` in `Code.gs` (comma-separated), then **Deploy → Manage deployments → Edit → New version**.
