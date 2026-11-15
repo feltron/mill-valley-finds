@@ -61,7 +61,7 @@ function deployEmail(d, s, h) {
   if (!commits.length) return done("nothing to report");
   const first = s(commits[0].message).split("\n")[0];
   const items = commits.map(c => {
-    const lines = s(c.message).split("\n");
+    const lines = String(c.message || "").split("\n").filter(l => !/^(Co-Authored-By|Claude-Session|Signed-off-by):/i.test(l.trim())).map(l => l.slice(0, 300));
     const url = /^https:\/\/github\.com\//.test(s(c.url)) ? s(c.url) : "";
     return '<li style="margin:0 0 8px"><b>' + h(lines[0]) + "</b>" +
       (lines.slice(1).join(" ").trim() ? '<br><span style="color:#5D6A63">' + h(lines.slice(1).join(" ").trim().slice(0, 300)) + "</span>" : "") +
